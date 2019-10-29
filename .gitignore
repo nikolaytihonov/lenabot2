@@ -1,0 +1,7 @@
+obj/
+x64/
+json/Debug/
+json/obj/
+json/x64/
+*.sdf
+*.opensdf
