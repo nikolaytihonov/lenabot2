@@ -2,6 +2,7 @@
 #include <boost/algorithm/string.hpp>
 #include "vkrequest.h"
 #include "bot.h"
+#include <boost/format.hpp>
 
 LIST_ZERO_INIT(Service::s_List);
 
@@ -143,7 +144,13 @@ void ServiceSystem::FinishCommand(const VkMessage& msg)
 	LIST_ITER_BEGIN(Service::s_List)
 		IService* svc = dynamic_cast<IService*>(
 			(Service*)LIST_DATA(Service::s_List,item));
-		if(svc->ProcessCommand(m_Cmd)) break;
+		try {
+			if(svc->ProcessCommand(m_Cmd)) break;
+		} catch(std::exception& e) {
+			services.Reply(boost::str(
+				boost::format("Во время выполнения команды %s произошло исключение: %s")
+					% m_Cmd.GetName() % std::string(e.what())));
+		}
 	LIST_ITER_END()
 }
 

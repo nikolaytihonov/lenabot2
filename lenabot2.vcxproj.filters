@@ -60,6 +60,9 @@
     <ClCompile Include="admin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="leto.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bot.h">
@@ -99,6 +102,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="admin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="leto.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -123,13 +123,18 @@ void Bot::StartLongPoll()
 	}
 }
 
+int Bot::GetMessageRandomId()
+{
+	return (int)time(NULL)+m_iMsgSent++;
+}
+
 void Bot::Send(int conv_id,std::string text,bool bAsync,int reply)
 {
 	json_value* val;
 	BotLog("%s %d\n",__FUNCTION__,conv_id);
 	VkRequest* msg = new VkRequest("messages.send");
 	msg->SetParam("peer_id",conv_id);
-	msg->SetParam("random_id",(int)time(NULL)+m_iMsgSent++);
+	msg->SetParam("random_id",(int)GetMessageRandomId());
 	if(reply) msg->SetParam("reply_to",reply);
 	msg->AddMultipart(VkPostMultipart("message",
 		text,VkPostMultipart::Text));

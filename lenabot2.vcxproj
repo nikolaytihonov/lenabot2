@@ -135,6 +135,7 @@
     <ClCompile Include="dbg.cpp" />
     <ClCompile Include="event.cpp" />
     <ClCompile Include="events.cpp" />
+    <ClCompile Include="leto.cpp" />
     <ClCompile Include="list.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="service.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="database.h" />
     <ClInclude Include="dbg.h" />
     <ClInclude Include="event.h" />
+    <ClInclude Include="leto.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="service.h" />
     <ClInclude Include="stats.h" />

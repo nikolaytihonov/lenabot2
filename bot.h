@@ -24,6 +24,7 @@ public:
 	virtual void PrepareLongPoll(std::string server,std::string key,int ts);
 	virtual bool PrepareLongPoll();
 	void StartLongPoll();
+	int GetMessageRandomId();
 	void Send(int conv_id,std::string text,bool bAsync = true,int reply = 0);
 	void SendText(int conv_id,std::string text,bool bAsync = true,int reply = 0); //Для большого текста
 	void ProcessEvent(const json_value& event);
