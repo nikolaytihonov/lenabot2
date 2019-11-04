@@ -6,6 +6,7 @@
 #include <boost/algorithm/minmax.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 #include "event.h"
 #include "service.h"
 #include "database.h"
@@ -52,6 +53,10 @@ void Bot::Start(std::string config_file)
 	
 	m_pVk = new VkApi(m_Token,this);
 	
+	//Загрузка бесед
+	AddConversation(GetMainConv());
+	LoadConversations();
+
 	//Запуск всех остальных систем
 	db.Open();
 	services.LoadServices();
@@ -83,6 +88,106 @@ void Bot::Run()
 		ProcessMessage(VkMessage(-1,GetMainConv(),-1,
 			time(NULL),ConsoleReadLine()));
 	}
+}
+
+void Bot::LoadConversations()
+{
+	int offset = 0;
+	int count = 0;
+	
+	try {
+		do {
+			json_value* pVal;
+
+			VkRequest* get = new VkRequest("messages.getConversations");
+			get->SetParam("offset",offset);
+			get->SetParam("count",200);
+			m_pVk->Request(get,&pVal);
+			{
+				boost::shared_ptr<json_value> val(pVal,json_value_free);
+				auto& res = (*val)["response"];
+				auto& items = res["items"];
+				count = (int)res["count"];
+
+				if(items.type != json_array)
+					throw std::exception("items.type != json_array");
+				for(int i = 0; i < items.u.array.length; i++)
+				{
+					auto& conv = items[i]["conversation"];
+					auto& peer = conv["peer"];
+					if(peer.type == json_none)
+						throw std::exception("peer.type == json_none");
+					conv_t cv;
+					cv.id = (int)peer["id"];
+					cv.local_id = (int)peer["local_id"];
+					std::string type = std::string((const char*)peer["type"]);
+					if(IsValidConversation(cv.id)) continue;
+					if(cv.id == GetMainConv()) cv.type = ConvMainChat;
+					else if(type == "user") cv.type = ConvUser;
+					else if(type == "chat") cv.type = ConvChat;
+					else if(type == "group") cv.type = ConvGroup;
+					else if(type == "email") cv.type = ConvEmail;
+					m_Conversations.push_back(cv);
+				}
+
+				offset += items.u.array.length;
+			}
+		} while(offset < count);
+	} catch(std::exception& e) {
+		Send(ConvMainChat,boost::str(
+			boost::format("Ошибка загрузки бесед: %s")
+				% std::string(e.what())),false);
+	}
+}
+
+void Bot::AddConversation(int peer_id)
+{
+	try {
+		json_value* pVal;
+		VkRequest* get = new VkRequest("messages.getConversationsById");
+		get->SetParam("peer_ids",peer_id);
+		m_pVk->Request(get,&pVal);
+
+		conv_t cv;
+		auto& res = (*pVal)["response"];
+		auto& peer = res["items"][0]["peer"];
+		cv.id = (int)peer["id"];
+		cv.local_id = (int)peer["local_id"];
+		std::string type = std::string((const char*)peer["type"]);
+		if(cv.id == GetMainConv()) cv.type = ConvMainChat;
+		else if(type == "user") cv.type = ConvUser;
+		else if(type == "chat") cv.type = ConvChat;
+		else if(type == "group") cv.type = ConvGroup;
+		else if(type == "email") cv.type = ConvEmail;
+		m_Conversations.push_back(cv);
+
+		json_value_free(pVal);
+	} catch(std::exception& e) {
+		Send(ConvMainChat,boost::str(
+			boost::format("Ошибка загрузка беседы %d: %s")
+				% peer_id % std::string(e.what())),false);
+	}
+}
+
+bool Bot::IsValidConversation(int peer_id)
+{
+	return std::find(m_Conversations.begin(),
+		m_Conversations.end(),peer_id) != m_Conversations.end();
+}
+
+int Bot::GetLocalId(int peer_id)
+{
+	auto it = std::find(m_Conversations.begin(),
+		m_Conversations.end(),peer_id);
+	if(it == m_Conversations.end())
+	{
+		AddConversation(peer_id);
+		it = std::find(m_Conversations.begin(),
+			m_Conversations.end(),peer_id);
+		if(it == m_Conversations.end())
+			return -1;
+	}
+	return it->local_id;
 }
 
 void Bot::PrepareLongPoll(std::string server,std::string key,int ts)
@@ -128,14 +233,15 @@ int Bot::GetMessageRandomId()
 	return (int)time(NULL)+m_iMsgSent++;
 }
 
-void Bot::Send(int conv_id,std::string text,bool bAsync,int reply)
+void Bot::SendMessage(int peer_id,std::string text,bool bAsync,int reply,std::string attach)
 {
 	json_value* val;
-	BotLog("%s %d\n",__FUNCTION__,conv_id);
+	BotLog("%s %d\n",__FUNCTION__,peer_id);
 	VkRequest* msg = new VkRequest("messages.send");
-	msg->SetParam("peer_id",conv_id);
+	msg->SetParam("peer_id",peer_id);
 	msg->SetParam("random_id",(int)GetMessageRandomId());
 	if(reply) msg->SetParam("reply_to",reply);
+	if(!attach.empty()) msg->SetParam("attachment",attach);
 	msg->AddMultipart(VkPostMultipart("message",
 		text,VkPostMultipart::Text));
 	OnRequestPreAdd(msg);
@@ -147,12 +253,12 @@ void Bot::Send(int conv_id,std::string text,bool bAsync,int reply)
 	}
 }
 
-void Bot::SendText(int conv_id,std::string text,bool bAsync,int reply)
+void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,std::string attach)
 {
 	int len = utf8::distance(text.begin(),text.end());
 	if(len <= 4096)
 	{
-		Send(conv_id,text,bAsync,reply);
+		SendMessage(peer_id,text,bAsync,reply,attach);
 		return;
 	}
 	
@@ -165,8 +271,18 @@ void Bot::SendText(int conv_id,std::string text,bool bAsync,int reply)
 		int d = boost::minmax<int>(4096,len).get<0>();
 		len -= d;
 		utf8::utf32to8(text32.begin()+pos,text32.begin()+pos+d,std::back_inserter(block));
-		Send(conv_id,block,bAsync,reply);
+		SendMessage(peer_id,block,bAsync,reply,len > 0 ? "" : attach);
 		pos += d;
+	}
+}
+
+void Bot::Send(convtype_t type,std::string text,bool bAsync,int reply,std::string attach)
+{
+	for(auto it = m_Conversations.begin(); 
+		it != m_Conversations.end(); ++it)
+	{
+		if(it->type == type || (type == ConvChat && it->type == ConvMainChat))
+			Send(it->id,text,bAsync,reply,attach);
 	}
 }
 
@@ -174,14 +290,18 @@ void Bot::ProcessEvent(const json_value& event)
 {
 	services.ProcessEvent(event);
 	
-	const json_value& from = event[6];
+	auto& from = event[6];
+	int peer_id;
 	switch((int)event[0])
 	{
 		case 4:
 			if(&from == &json_value_none) return;
+			int peer_id = (int)event[3];
+			if(!IsValidConversation(peer_id))
+				AddConversation(peer_id);
 			ProcessMessage(VkMessage(
 				(int)event[1],
-				(int)event[3],
+				peer_id,
 				(int)from["from"],
 				(int)event[4],
 				std::string((const char*)event[5])));
@@ -212,7 +332,7 @@ void Bot::ProcessMessage(const VkMessage& msg)
 				m_pVk->GetWorker(i)->Dump(dump);
 		}
 		
-		SendText(msg.m_iConvId,std::string(dump),false);
+		Send(msg.m_iConvId,std::string(dump),false);
 	}
 	else if(msg.m_Text == "смотритель#сохранить_сервисы")
 	{

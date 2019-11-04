@@ -1,6 +1,7 @@
 #include "database.h"
 #include <stdio.h>
 #include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
 
 DataBase db;
 
@@ -57,3 +58,9 @@ bool DataBase::TableExists(std::string table)
 		boost::format("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='%s';") % table
 		)) > 0;
 }	
+
+std::string sql_str(std::string sql)
+{
+	boost::replace_all(sql,"'","");
+	return sql;
+}

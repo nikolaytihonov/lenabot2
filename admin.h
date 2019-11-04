@@ -31,6 +31,9 @@ public:
 	virtual bool IsAdherent(int user_id) = 0;
 	virtual bool IsIncorrect(int user_id) = 0;
 	virtual bool IsBanned(int user_id) = 0;
+
+	//Неверные и забаненные не имеют права выполнять команды.
+	virtual bool CanRunCommand(int user_id) = 0;
 };
 
 extern IAdmin* admin;

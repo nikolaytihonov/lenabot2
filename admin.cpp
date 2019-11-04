@@ -42,6 +42,11 @@ public:
 		return GetPrivelege(user_id) == Banned;
 	}
 
+	virtual bool CanRunCommand(int user_id){
+		int priv = GetPrivelege(user_id);
+		return (priv != Incorrect) && (priv != Banned);
+	}
+
 	int FindPrivelege(std::string priv);
 	int CreateRole(std::string role,int priv);
 	void DeleteRole(int role_id);
@@ -144,7 +149,7 @@ void Admin::Save()
 	{
 		db.Execute(boost::str(
 			boost::format("INSERT OR REPLACE INTO blacklist (user_id,reason)"
-			" VALUES ('%d','%s');") % it->first % it->second));
+			" VALUES ('%d','%s');") % it->first % sql_str(it->second)));
 	}
 }
 
@@ -156,24 +161,21 @@ void Admin::Save()
 
 bool Admin::ProcessCommand(const Command& cmd)
 {
-	std::stringstream out;
 	if(cmd.GetName() == "ранги")
 	{
 		std::map<int,int>::iterator it = m_Priveleges.begin();
 		for(; it != m_Priveleges.end(); ++it)
 		{
-			out << "https://vk.com/id" << it->first
+			services << "https://vk.com/id" << it->first
 			<< " - " << GetPrivelegeName(it->second)
-			<< std::endl;
+			<< '\n';
 		}
-		services.Reply(out.str());
 		return true;
 	}
 	else if(cmd.GetName() == "список_рангов")
 	{
 		for(int i = 0; i < sizeof(s_PrivelegeNames)/sizeof(std::string); i++)
-			out << i-1 << ' ' << s_PrivelegeNames[i] << std::endl;
-		services.Reply(out.str());
+			services << i-1 << ' ' << s_PrivelegeNames[i] << '\n';
 		return true;
 	}
 	else if(cmd.GetName() == "задать_ранг" && services.CheckAdmin(Leader))
@@ -184,14 +186,12 @@ bool Admin::ProcessCommand(const Command& cmd)
 		int priv = FindPrivelege(cmd.Arg(1));
 		if(priv == LastPrivelege)
 		{
-			out << "Неверная привелегия";
-			services.Reply(out.str());
+			services << "Неверная привелегия";
 			return true;
 		}
 		if(priv == StHelen)
 		{
-			out << "Права Св.Елены никто не может иметь";
-			services.Reply(out.str());
+			services << "Права Св.Елены никто не может иметь";
 			return true;
 		}
 		
@@ -202,11 +202,10 @@ bool Admin::ProcessCommand(const Command& cmd)
 	{
 		for(auto it = m_Roles.begin(); it != m_Roles.end(); ++it)
 		{
-			out << "ID роли " << it->first
+			services << "ID роли " << it->first
 				<< " привелегия " << GetPrivelegeName(it->second.m_iPrivelege)
-				<< " описание: " << it->second.m_Role << std::endl;
+				<< " описание: " << it->second.m_Role << '\n';
 		}
-		services.Reply(out.str());
 		return true;
 	}
 	else if(cmd.GetName() == "создать_роль" && services.CheckAdmin(Leader))
@@ -215,9 +214,8 @@ bool Admin::ProcessCommand(const Command& cmd)
 		if(cmd.ArgC() < 3) return false;
 		int priv = FindPrivelege(cmd.Arg(2));
 		if(priv == LastPrivelege)
-			out << "Неверная привелегия.";
-		else out << "ID новой роли: " << CreateRole(cmd.Arg(1),priv);
-		services.Reply(out.str());
+			services << "Неверная привелегия.";
+		else services << "ID новой роли: " << CreateRole(cmd.Arg(1),priv);
 		return true;
 	}
 	else if(cmd.GetName() == "удалить_роль" && services.CheckAdmin(Leader))
@@ -225,8 +223,7 @@ bool Admin::ProcessCommand(const Command& cmd)
 		//Лена удалить_роль ID
 		if(cmd.ArgC() < 2) return false;
 		DeleteRole(boost::lexical_cast<int>(cmd.Arg(1)));
-		out << "Роль " << cmd.Arg(1) << " удалена";
-		services.Reply(out.str());
+		services << "Роль " << cmd.Arg(1) << " удалена";
 		return true;
 	}
 	else if(cmd.GetName() == "дать_роль" && services.CheckAdmin(Leader))
@@ -237,21 +234,18 @@ bool Admin::ProcessCommand(const Command& cmd)
 		int role = FindRole(cmd.Arg(1));
 		if(role == -1)
 		{
-			out << "Роль не найдена.";
-			services.Reply(out.str());
+			services << "Роль не найдена.";
 			return true;
 		}
 		SetRole(services.GetFwdUser(),role);
-		out << "Теперь у " << services.GetFwdUser() << " роль " << GetRole(services.GetFwdUser());
-		services.Reply(out.str());
+		services << "Теперь у " << services.GetFwdUser() << " роль " << GetRole(services.GetFwdUser());
 		return true;
 	}
 	else if(cmd.GetName() == "забрать_роль" && services.CheckAdmin(Leader))
 	{
 		if(!services.CheckFwdUser()) return true;
 		SetRole(services.GetFwdUser(),-1);
-		out << "Роль с " << services.GetFwdUser() << " была снята.";
-		services.Reply(out.str());
+		services << "Роль с " << services.GetFwdUser() << " была снята.";
 		return true;
 	}
 	else if(cmd.GetName() == "статус")
@@ -260,16 +254,14 @@ bool Admin::ProcessCommand(const Command& cmd)
 			? services.GetFwdUser() : services.GetCommandUser().m_iUserId;
 		if(user == 0)
 		{
-			out << "Пользователь ненайден!";
-			services.Reply(out.str());
+			services << "Пользователь ненайден!";
 			return true;
 		}
-		out << "ID: " << user << std::endl
+		services << "ID: " << user << '\n'
 			<< "Уровень доступа: " 
-			<< GetPrivelegeName(GetPrivelege(user)) << std::endl
-			<< "Административный доступ: " << (services.IsUserAdmin(user) ? "Да" : "Нет") << std::endl
-			<< "Роль: " << GetRoleName(user) << std::endl;
-		services.Reply(out.str());
+			<< GetPrivelegeName(GetPrivelege(user)) << '\n'
+			<< "Административный доступ: " << (services.IsUserAdmin(user) ? "Да" : "Нет") << '\n'
+			<< "Роль: " << GetRoleName(user) << '\n';
 		return true;
 	}
 	else if(cmd.GetName() == "кик" && services.CheckAdmin())
@@ -279,19 +271,58 @@ bool Admin::ProcessCommand(const Command& cmd)
 		else if(cmd.ArgC() < 2) user = services.GetFwdUser();
 		if(!user)
 		{
-			out << "Пользователь ненайден";
-			services.Reply(out.str());
+			services << "Пользователь ненайден";
 			return true;
 		}
 		if(GetPrivelege(user) <= GetPrivelege(services.GetCommandUser().m_iUserId))
 		{
-			out << "Недостаточно прав.";
-			services.Reply(out.str());
+			services << "Недостаточно прав.";
 			return true;
 		}
 		Kick(user);
-		out << "Пользователь " << user << " был кикнут.";
-		services.Reply(out.str());
+		services << "Пользователь " << user << " был кикнут.";
+		return true;
+	}
+	else if(cmd.GetName() == "бан" && services.CheckAdmin())
+	{
+		int user = 0;
+		std::string reason = "";
+		if(services.GetFwdUser() != 0)
+		{
+			user = services.GetFwdUser();
+			reason = cmd.Arg(1);
+		}
+		else
+		{
+			user = boost::lexical_cast<int>(cmd.Arg(1));
+			reason = cmd.Arg(2);
+		}
+		if(!user)
+		{
+			services << "Пользователь ненайден";
+			return true;
+		}
+		Ban(user,reason);
+		Kick(user);
+		services << "Пользователь " << user << " был забанен по причине \""
+			<< reason << "\"";
+		return true;
+	}
+	else if(cmd.GetName() == "баны" && services.CheckAdmin())
+	{
+		for(auto it = m_BlackList.begin(); it != m_BlackList.end(); ++it)
+		{
+			services << "https://vk.com/id" << it->first << " по причине \""
+				<< it->second << "\"";
+		}
+		return true;
+	}
+	else if(cmd.GetName() == "разбанить" && services.CheckAdmin())
+	{
+		if(cmd.ArgC() < 2) return false;
+		int user = boost::lexical_cast<int>(cmd.Arg(1));
+		UnBan(user);
+		services << "Пользователь " << user << " был разбанен";
 		return true;
 	}
 	return false;
@@ -345,7 +376,7 @@ std::string Admin::GetPrivelegeName(int priv)
 void Admin::Kick(int user_id)
 {
 	VkRequest* kick = new VkRequest("messages.removeChatUser");
-	kick->SetParam("chat_id",services.GetCommandUser().m_iConvId);
+	kick->SetParam("chat_id",services.GetLocalId());
 	kick->SetParam("user_id",user_id);
 	services.Request(kick);
 }
@@ -360,7 +391,7 @@ int Admin::CreateRole(std::string desc,int priv)
 
 	db.Execute(boost::str(
 		boost::format("INSERT OR REPLACE INTO roles (role_id,privelege,role_name)"
-			" VALUES ('%d','%d','%s');") % id % role.m_iPrivelege % role.m_Role));
+			" VALUES ('%d','%d','%s');") % id % role.m_iPrivelege % sql_str(role.m_Role)));
 	return id;
 }
 

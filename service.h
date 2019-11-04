@@ -2,6 +2,8 @@
 #define __SERVICE_H
 
 #include <string.h>
+#include <string>
+#include <sstream>
 #include <map>
 #include "vkapi.h"
 #include "list.h"
@@ -46,10 +48,12 @@ public:
 	void LoadServices();
 	void SaveServices();
 	void ProcessEvent(const json_value& event);
-	bool ParseMessage(int msg_id,std::string text);
+	bool ParseMessage(int msg_id,int user_id,std::string text);
 	void FinishCommand(const VkMessage& msg);
 
 	const VkMessage& GetCommandUser(){return m_Msg;}
+	int GetPeerId(){return GetCommandUser().m_iConvId;}
+	int GetLocalId();
 	bool IsUserAdmin(int user_id,int priv = HighAdherent);
 	bool IsUserAdmin();
 	bool IsAsyncMode(){return !m_bSync;}
@@ -59,11 +63,19 @@ public:
 	bool CheckFwdUser();
 
 	void Request(IVkRequest* req);
+
+	template<typename T>
+	inline ServiceSystem& operator<<(const T& obj)
+	{
+		m_Reply << obj;
+		return *this;
+	}
 private:
 	std::map<int,Command> m_Cmds;
 	Command m_Cmd;
 	VkMessage m_Msg;
 	bool m_bSync;
+	std::stringstream m_Reply;
 };
 
 extern ServiceSystem services;

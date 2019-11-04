@@ -42,13 +42,12 @@ static int leto_load(void* str,int,char** argv,char**)
 	std::stringstream& out = *(std::stringstream*)str;
 	out << "ID " << argv[0] << " Имя \"" 
 		<< argv[2] << "\" Теги: \"" 
-		<< argv[3] << "\"" << std::endl;
+		<< argv[3] << "\"" << '\n';
 	return 0;
 }
 
 bool LetoService::ProcessCommand(const Command& cmd)
 {
-	std::stringstream out;
 	if(cmd.GetName() == "leto_mirror" && services.CheckAdmin(Leader))
 	{
 		if(cmd.ArgC() < 3) return false;
@@ -57,6 +56,7 @@ bool LetoService::ProcessCommand(const Command& cmd)
 	}
 	else if(cmd.GetName() == "leto_list" && services.CheckAdmin(Leader))
 	{
+		std::stringstream out;
 		db.Execute("SELECT * FROM leto_groups;",leto_load,&out);
 		services.Reply(out.str());
 		return true;
@@ -64,10 +64,9 @@ bool LetoService::ProcessCommand(const Command& cmd)
 	else if(cmd.GetName() == "leto_info" && services.CheckAdmin(Leader))
 	{
 		if(cmd.ArgC() < 2) return false;
-		out << "Количество: " << db.Count(boost::str(
-			boost::format("SELECT * FROM leto_group_%s;") % cmd.Arg(1)))
-			<< std::endl;
-		services.Reply(out.str());
+		services << "Количество: " << db.Count(boost::str(
+			boost::format("SELECT * FROM leto_group_%s;") % sql_str(cmd.Arg(1))))
+			<< '\n';
 		return true;
 	}
 	else if(cmd.GetName() == "арт")
@@ -76,13 +75,12 @@ bool LetoService::ProcessCommand(const Command& cmd)
 		std::string photo = GetRandomArt(cmd.Arg(1));
 		if(photo.empty())
 		{
-			out << "Арт ненайден.";
-			services.Reply(out.str());
+			services << "Арт ненайден.";
 			return true;
 		}
 
 		VkRequest* art = new VkRequest("messages.send");
-		art->SetParam("peer_id",services.GetCommandUser().m_iConvId);
+		art->SetParam("peer_id",services.GetPeerId());
 		art->SetParam("reply_to",services.GetCommandUser().m_iMsgId);
 		art->SetParam("random_id",bot.GetMessageRandomId());
 		art->SetParam("attachment",photo);
@@ -175,7 +173,7 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 	db.Execute(boost::str(
 		boost::format("INSERT OR REPLACE INTO leto_groups (id,type,name,tags)"
 		" VALUES ('%d','group','%s','%s');")
-			% id % name % tags));
+			% id % sql_str(name) % tags));
 
 	if(!db.TableExists(boost::str(boost::format("leto_group_%d") % id)))
 	{
@@ -192,7 +190,7 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 				" VALUES ('%d','%d','%d');")
 					% id % it->post_id % it->owner_id % it->id));
 		} catch(std::exception& e) {
-			bot.SendText(services.GetCommandUser().m_iConvId,boost::str(
+			bot.Send(services.GetPeerId(),boost::str(
 				boost::format("[Warning] При клонирование произошло исключение: %s")
 					% std::string(e.what())),false);
 		}
@@ -221,7 +219,7 @@ std::string LetoService::GetRandomArt(std::string tag)
 	int id = -1;
 	db.Execute(boost::str(
 		boost::format("SELECT * FROM leto_groups WHERE tags='%s' ORDER BY RANDOM() LIMIT 1;")
-			% tag),leto_find_id,&id);
+			% sql_str(tag)),leto_find_id,&id);
 	if(id == -1) return "";
 	std::string photo = "";
 	db.Execute(boost::str(

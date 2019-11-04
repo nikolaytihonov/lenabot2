@@ -3,6 +3,7 @@
 
 #include <string>
 #include <string.h>
+#include <vector>
 #include "json/json.h"
 #include "vkapi.h"
 
@@ -23,10 +24,15 @@ public:
 	
 	virtual void PrepareLongPoll(std::string server,std::string key,int ts);
 	virtual bool PrepareLongPoll();
+	void LoadConversations();
+	void AddConversation(int peer_id);
+	bool IsValidConversation(int peer_id);
+	int GetLocalId(int peer_id);
 	void StartLongPoll();
 	int GetMessageRandomId();
-	void Send(int conv_id,std::string text,bool bAsync = true,int reply = 0);
-	void SendText(int conv_id,std::string text,bool bAsync = true,int reply = 0); //Для большого текста
+	void SendMessage(int peer_id,std::string text,bool bAsync = true,int reply = 0,std::string attach = "");
+	void Send(int peer_id,std::string text,bool bAsync = true,int reply = 0,std::string attach = ""); //Для большого текста
+	void Send(convtype_t type,std::string text,bool bAsync = true,int reply = 0,std::string attach = "");
 	void ProcessEvent(const json_value& event);
 	void ProcessMessage(const VkMessage& msg);
 		
@@ -56,6 +62,8 @@ private:
 	
 	int m_iMsgSent;
 	int m_iErrLongPoll;
+
+	std::vector<conv_t> m_Conversations;
 };
 
 extern Bot bot;

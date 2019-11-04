@@ -37,7 +37,7 @@ bool Service::ProcessMessage(const VkMessage& msg)
 
 void ServiceSystem::Reply(std::string text)
 {
-	bot.SendText(GetCommandUser().m_iConvId,text,
+	bot.Send(GetPeerId(),text,
 		IsAsyncMode(),m_Msg.m_iMsgId);
 }
 
@@ -68,7 +68,7 @@ bool ServiceSystem::CheckFwdUser()
 	{
 		Reply("Пользователь не найден. "
 			"Чтобы указать пользователя, перешлите и "
-			"ответье на его сообщения этой командой");
+			"ответьте на его сообщения этой командой");
 		return false;
 	}
 	return true;
@@ -97,11 +97,12 @@ void ServiceSystem::SaveServices()
 void ServiceSystem::ProcessEvent(const json_value& event)
 {
 	const json_value& from = event[6];
+	//peer_id = (int)event[3]
 	switch((int)event[0])
 	{
 		case 4:
 			if(&from == &json_value_none) break;
-			if(ParseMessage((int)event[1],
+			if(ParseMessage((int)event[1],(int)event[4],
 				std::string((const char*)event[5]))) return;
 			break;
 	}
@@ -113,11 +114,11 @@ void ServiceSystem::ProcessEvent(const json_value& event)
 	LIST_ITER_END()
 }
 
-bool ServiceSystem::ParseMessage(int msg_id,std::string text)
+bool ServiceSystem::ParseMessage(int msg_id,int user_id,std::string text)
 {
 	Command cmd;
 	boost::replace_all(text,"&quot;","\"");
-	if(cmd.Parse(text))
+	if(cmd.Parse(text) && admin->CanRunCommand(user_id))
 	{
 		bot.GetAPI()->RequestAsync(
 			new VkCommandGetMessage(msg_id)
@@ -138,20 +139,29 @@ void ServiceSystem::FinishCommand(const VkMessage& msg)
 	m_Cmds.erase(it);
 
 	m_bSync = false;
-	if(m_Cmd.HasFlag("!sync") && CheckAdmin())
+	if(m_Cmd.HasFlag("!sync") && CheckAdmin(Leader))
 		m_bSync = true;
 
 	LIST_ITER_BEGIN(Service::s_List)
 		IService* svc = dynamic_cast<IService*>(
 			(Service*)LIST_DATA(Service::s_List,item));
 		try {
-			if(svc->ProcessCommand(m_Cmd)) break;
+			m_Reply.str("");
+			bool bOk = svc->ProcessCommand(m_Cmd);
+			Reply(m_Reply.str());
+			m_Reply.str("");
+			if(bOk) break;
 		} catch(std::exception& e) {
 			services.Reply(boost::str(
 				boost::format("Во время выполнения команды %s произошло исключение: %s")
 					% m_Cmd.GetName() % std::string(e.what())));
 		}
 	LIST_ITER_END()
+}
+
+int ServiceSystem::GetLocalId()
+{
+	return bot.GetLocalId(GetPeerId());
 }
 
 void ServiceSystem::Request(IVkRequest* req)

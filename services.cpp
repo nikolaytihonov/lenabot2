@@ -1,5 +1,6 @@
 #include "service.h"
 #include "event.h"
+#include "vkapi.h"
 #include "bot.h"
 #include "vkrequest.h"
 #include <string>
@@ -35,6 +36,12 @@ public:
 			SendArt(msg.m_iConvId,msg.m_Text,msg.m_iMsgId);
 			return true;
 		}
+		/*else if(msg.m_Text == "Лена_рассылка")
+		{
+			VkUploadPhotoChat* photo = new VkUploadPhotoChat(ConvChat,"Лена. Рассылка.");
+			photo->AddPhoto(GetArt("Лена"));
+			bot.GetAPI()->RequestAsync(photo);
+		}*/
 		return false;
 	}
 
@@ -57,14 +64,20 @@ public:
 
 	void SendArt(int conv_id,std::string artName,int reply_to = 0)
 	{
-		auto it = m_Arts.find(artName);
-		if(it == m_Arts.end()) return;
-		if(it->second.empty()) return;
-
 		srand((unsigned int)time(NULL));
 		VkUploadPhotoChat* art = new VkUploadPhotoChat(conv_id,"",reply_to);
-		art->AddPhoto(it->second[rand()%it->second.size()]);
+		art->AddPhoto(GetArt(artName));
 		services.Request(art);
+	}
+
+	std::string GetArt(std::string artName)
+	{
+		auto it = m_Arts.find(artName);
+		if(it == m_Arts.end()) return "";
+		if(it->second.empty()) return "";
+
+		srand((unsigned int)time(NULL));
+		return it->second[rand()%it->second.size()];
 	}
 private:
 	std::map<std::string,std::vector<std::string>> m_Arts;

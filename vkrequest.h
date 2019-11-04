@@ -8,6 +8,30 @@
 #include "json/json.h"
 #include "vkapicontroller.h"
 
+typedef enum convtype_t {
+	ConvMainChat = -1,
+	ConvUser,
+	ConvChat,
+	ConvGroup,
+	ConvEmail
+};
+
+typedef struct conv_s {
+	int id;
+	convtype_t type;
+	int local_id;
+
+	bool operator==(const struct conv_s& cv)
+	{
+		return this->id == cv.id;
+	}
+
+	bool operator==(int peer_id)
+	{
+		return this->id == peer_id;
+	}
+} conv_t;
+
 class VkApi;
 
 class VkPostMultipart
@@ -186,6 +210,7 @@ class VkUploadPhotoChat : public VkLinkedRequest
 {
 public:
 	VkUploadPhotoChat(int conv_id,std::string text = "",int reply_to = 0);
+	VkUploadPhotoChat(convtype_t conv,std::string text = "",int reply_to = 0);
 	
 	virtual IVkRequest* Create(){return new VkUploadPhotoChat(*this);}
 	virtual void Prepare(VkApi*);
@@ -195,7 +220,11 @@ public:
 	void AddPhoto(std::string file);
 	
 private:
-	int m_iConvId;
+	bool m_bMultiSend;
+	union {
+		int m_iConvId;
+		convtype_t m_ConvType;
+	} m_Peer;
 	int m_iPhotoCur;
 	int m_iReplyTo;
 	std::string m_Text;

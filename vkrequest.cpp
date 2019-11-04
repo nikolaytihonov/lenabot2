@@ -2,6 +2,7 @@
 #include "vkapi.h"
 #include "dbg.h"
 #include "service.h"
+#include "bot.h"
 #include <sstream>
 #include <boost/format.hpp>
 
@@ -220,11 +221,23 @@ void VkLongPoll::OnRequestFinished(json_value& val)
 }
 
 VkUploadPhotoChat::VkUploadPhotoChat(int conv_id,std::string text,int reply_to)
-	: m_iConvId(conv_id),
+	:
 	m_iPhotoCur(0),
 	m_Text(text),
 	m_iReplyTo(reply_to)
 {
+	m_bMultiSend = false;
+	m_Peer.m_iConvId = conv_id;
+}
+
+VkUploadPhotoChat::VkUploadPhotoChat(convtype_t type,std::string text,int reply_to)
+	:
+	m_iPhotoCur(0),
+	m_Text(text),
+	m_iReplyTo(reply_to)
+{
+	m_bMultiSend = true;
+	m_Peer.m_ConvType = type;
 }
 
 void VkUploadPhotoChat::Prepare(VkApi* api)
@@ -233,7 +246,7 @@ void VkUploadPhotoChat::Prepare(VkApi* api)
 	{
 		case 0:
 			m_Method = "photos.getMessagesUploadServer";
-			SetParam("chat_id",m_iConvId);
+			SetParam("chat_id",m_bMultiSend ? bot.GetMainConv() : m_Peer.m_iConvId);
 			break;
 	}
 	VkRequest::Prepare(api);
@@ -281,14 +294,22 @@ void VkUploadPhotoChat::OnRequestFinished(json_value& val)
 					if(std::next(it) != m_Attachments.end())
 						attach += ',';
 				}
-				SetParam("peer_id",m_iConvId);
-				SetParam("random_id",(int)time(NULL)+rand());
-				AddMultipart(VkPostMultipart("message",
-					m_Text,VkPostMultipart::Text));
-				SetParam("attachment",attach);
-				if(m_iReplyTo) SetParam("reply_to",m_iReplyTo);
-				m_Method = "messages.send";
-				SetPriority(IVkRequest::Standard);
+				if(m_bMultiSend)
+				{
+					bot.Send(m_Peer.m_ConvType,m_Text,true,0,attach);
+					Finish();
+				}
+				else
+				{
+					SetParam("peer_id",m_Peer.m_iConvId);
+					SetParam("random_id",(int)time(NULL)+rand());
+					AddMultipart(VkPostMultipart("message",
+						m_Text,VkPostMultipart::Text));
+					SetParam("attachment",attach);
+					if(m_iReplyTo) SetParam("reply_to",m_iReplyTo);
+					m_Method = "messages.send";
+					SetPriority(IVkRequest::Standard);
+				}
 			}
 			break;
 	}

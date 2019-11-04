@@ -45,6 +45,8 @@ private:
 	sqlite3* m_pDb;
 };
 
+std::string sql_str(std::string sql);
+
 extern DataBase db;
 
 #endif
