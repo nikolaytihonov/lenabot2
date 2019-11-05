@@ -2,6 +2,7 @@
 #include "vkapi.h"
 #include "service.h"
 #include "database.h"
+#include "bot.h"
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -18,7 +19,11 @@ public:
 	virtual void Load();
 	virtual void Save();
 	virtual bool ProcessCommand(const Command& cmd);
+	virtual bool ProcessEvent(const json_value& event);
 	
+	void ProcessInviteUser(int peer_id,int from,int member);
+	void ProcessKickUser(int peer_id,int from,int member);
+
 	virtual int GetPrivelege(int user_id);
 	virtual void SetPrivelege(int user_id,int priv);
 	virtual void Ban(int user_id,std::string = "");
@@ -328,6 +333,58 @@ bool Admin::ProcessCommand(const Command& cmd)
 	return false;
 }
 
+bool Admin::ProcessEvent(const json_value& event)
+{
+	//[type,msg_id,flags,peer_id,timestamp,text,[attachments]]
+	if((int)event[0] == 4)
+	{
+		//6
+		int peer_id = (int)event[3];
+		auto& attachment = event[6];
+		if(attachment.type == json_none) return false;
+		if(attachment["source_act"].type == json_none) return false;
+		std::string source_act = std::string(
+			(const char*)attachment["source_act"]);
+		if(source_act == "chat_invite_user")
+		{
+			int source_mid = atoi((const char*)attachment["source_mid"]);
+			int from = atoi((const char*)attachment["from"]);
+			ProcessInviteUser(peer_id,from,source_mid);
+			return true;
+		}
+		else if(source_act == "chat_kick_user")
+		{
+			int source_mid = atoi((const char*)attachment["source_mid"]);
+			int from = atoi((const char*)attachment["from"]);
+			ProcessKickUser(peer_id,from,source_mid);
+			return true;
+		}
+		else if(source_act == "chat_invite_user_by_link")
+		{
+			int source_mid = atoi((const char*)attachment["source_mid"]);
+			ProcessKickUser(peer_id,0,source_mid);
+			return true;
+		}
+	}
+	return false;
+}
+
+void Admin::ProcessInviteUser(int peer_id,int from,int member)
+{
+	//Забаненных добавлять нельзя.
+	//Их могут добавить только те, у кого ранг Высшего адепта
+	if(IsBanned(member) && (from != 0 && 
+		(GetPrivelege(from) > HighAdherent && bot.GetAdminUser() != from)))
+	{
+		Kick(member);
+		bot.Send(peer_id,"Данный пользователь забанен");
+	}
+}
+
+void Admin::ProcessKickUser(int peer_id,int from,int member)
+{
+}
+
 int Admin::GetPrivelege(int user_id)
 {
 	auto it = m_Priveleges.find(user_id);
@@ -347,7 +404,12 @@ void Admin::Ban(int user_id,std::string reason)
 {
 	m_BlackList.insert(std::pair<int,std::string>
 		(user_id,reason));
-	SetPrivelege(user_id,Banned);
+	SetRole(user_id); //Снимает роль и дает User
+	SetPrivelege(user_id,Banned); //дает Banned
+
+	db.Execute(boost::str(
+		boost::format("INSERT OR REPLACE INTO blacklist (user_id,reason)"
+		" VALUES ('%d','%s');") % user_id % sql_str(reason)));
 }
 
 void Admin::UnBan(int user_id)
@@ -367,9 +429,8 @@ void Admin::UnBan(int user_id)
 
 std::string Admin::GetPrivelegeName(int priv)
 {
-	priv++;
-	if(priv >= 0 && priv < LastPrivelege)
-		return s_PrivelegeNames[priv];
+	if(priv >= StHelen && priv < LastPrivelege)
+		return s_PrivelegeNames[priv+1];
 	return "";
 }
 

@@ -233,7 +233,7 @@ int Bot::GetMessageRandomId()
 	return (int)time(NULL)+m_iMsgSent++;
 }
 
-void Bot::SendMessage(int peer_id,std::string text,bool bAsync,int reply,std::string attach)
+void Bot::SendMessage(int peer_id,std::string text,bool bAsync,int reply,const Attachment& attach)
 {
 	json_value* val;
 	BotLog("%s %d\n",__FUNCTION__,peer_id);
@@ -241,7 +241,8 @@ void Bot::SendMessage(int peer_id,std::string text,bool bAsync,int reply,std::st
 	msg->SetParam("peer_id",peer_id);
 	msg->SetParam("random_id",(int)GetMessageRandomId());
 	if(reply) msg->SetParam("reply_to",reply);
-	if(!attach.empty()) msg->SetParam("attachment",attach);
+	if(!attach.GetAttachment().empty())
+		msg->SetParam("attachment",attach.GetAttachment());
 	msg->AddMultipart(VkPostMultipart("message",
 		text,VkPostMultipart::Text));
 	OnRequestPreAdd(msg);
@@ -253,7 +254,7 @@ void Bot::SendMessage(int peer_id,std::string text,bool bAsync,int reply,std::st
 	}
 }
 
-void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,std::string attach)
+void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,const Attachment& attach)
 {
 	int len = utf8::distance(text.begin(),text.end());
 	if(len <= 4096)
@@ -271,12 +272,12 @@ void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,std::string at
 		int d = boost::minmax<int>(4096,len).get<0>();
 		len -= d;
 		utf8::utf32to8(text32.begin()+pos,text32.begin()+pos+d,std::back_inserter(block));
-		SendMessage(peer_id,block,bAsync,reply,len > 0 ? "" : attach);
+		SendMessage(peer_id,block,bAsync,reply,len > 0 ? Attachment("") : attach);
 		pos += d;
 	}
 }
 
-void Bot::Send(convtype_t type,std::string text,bool bAsync,int reply,std::string attach)
+void Bot::Send(convtype_t type,std::string text,bool bAsync,int reply,const Attachment& attach)
 {
 	for(auto it = m_Conversations.begin(); 
 		it != m_Conversations.end(); ++it)

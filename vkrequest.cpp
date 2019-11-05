@@ -296,7 +296,7 @@ void VkUploadPhotoChat::OnRequestFinished(json_value& val)
 				}
 				if(m_bMultiSend)
 				{
-					bot.Send(m_Peer.m_ConvType,m_Text,true,0,attach);
+					bot.Send(m_Peer.m_ConvType,m_Text,true,0,Attachment(attach));
 					Finish();
 				}
 				else

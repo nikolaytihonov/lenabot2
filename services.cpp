@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <boost/filesystem.hpp>
+#include "leto.h"
 
 using namespace boost::filesystem;
 
@@ -16,11 +17,23 @@ using namespace boost::filesystem;
 //ArtService lena("LenaService","Лена","D:/clublenochki");
 //ArtService alisa("AlisaService","Алиса","D:/alisa");
 
+class MultiArtAttach : public Attachment
+{
+public:
+	MultiArtAttach(std::string artType) : Attachment(artType)
+	{}
+
+	virtual std::string GetAttachment() const
+	{
+		return leto->GetRandomArt(m_Attach);
+	}
+};
+
 class ArtService : public Service, public Event
 {
 public:
 	ArtService() : Service("ArtService"),
-		Event("ArtService",Time(60*60,0))
+		Event("ArtService",Time(60*60*4,0))
 	{}
 
 	virtual void Load()
@@ -42,12 +55,24 @@ public:
 			photo->AddPhoto(GetArt("Лена"));
 			bot.GetAPI()->RequestAsync(photo);
 		}*/
+		/*else if(msg.m_Text == "!!FIRE")
+		{
+			std::string ar[] = {"Лена","Алиса","Славя"};
+			std::string artType = ar[rand()%3];
+
+			bot.Send(ConvChat,artType,true,0,MultiArtAttach(artType));
+		}*/
 		return false;
 	}
 
 	virtual void Fire()
 	{
-		SendArt(bot.GetMainConv(),"Лена");
+		//SendArt(bot.GetMainConv(),"Лена");
+		srand(time(NULL));
+		std::string ar[] = {"Лена","Алиса","Славя"};
+		std::string artType = ar[rand()%3];
+
+		bot.Send(ConvMainChat,artType,true,0,MultiArtAttach(artType));
 		Event::Fire();
 	}
 

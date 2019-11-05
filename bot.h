@@ -9,6 +9,18 @@
 
 #define BEGINS_WITH(text,with) (!memcmp(text,with,sizeof(with)-1))
 
+class Attachment
+{
+public:
+	explicit Attachment(std::string attach)
+		: m_Attach(attach)
+	{}
+
+	virtual std::string GetAttachment() const {return m_Attach;}
+protected:
+	std::string m_Attach;
+};
+
 class Bot : public IVkApiController
 {
 public:
@@ -30,9 +42,12 @@ public:
 	int GetLocalId(int peer_id);
 	void StartLongPoll();
 	int GetMessageRandomId();
-	void SendMessage(int peer_id,std::string text,bool bAsync = true,int reply = 0,std::string attach = "");
-	void Send(int peer_id,std::string text,bool bAsync = true,int reply = 0,std::string attach = ""); //Для большого текста
-	void Send(convtype_t type,std::string text,bool bAsync = true,int reply = 0,std::string attach = "");
+	void SendMessage(int peer_id,std::string text,bool bAsync = true,int reply = 0,
+		const Attachment& attach = Attachment(""));
+	void Send(int peer_id,std::string text,bool bAsync = true,int reply = 0,
+		const Attachment& attach = Attachment("")); //Для большого текста
+	void Send(convtype_t type,std::string text,bool bAsync = true,int reply = 0,
+		const Attachment& attach = Attachment(""));
 	void ProcessEvent(const json_value& event);
 	void ProcessMessage(const VkMessage& msg);
 		
