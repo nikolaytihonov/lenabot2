@@ -58,6 +58,8 @@ public:
 	int GetMainConv(){return m_iMainConv;}
 	const std::string& GetLogFile(){return m_LogFile;}
 	int GetAdminUser(){return m_iAdminUser;}
+	int GetMainGroup(){return m_iMainGroup;}
+	int GetMirrorGroup(){return m_iMirrorGroup;}
 	
 	void OnRequestPreAdd(IVkRequest* req);
 	
@@ -71,6 +73,8 @@ private:
 	std::string m_LogFile;
 	int m_iMainConv;
 	int m_iAdminUser;
+	int m_iMainGroup;
+	int m_iMirrorGroup;
 	VkApi* m_pVk;
 	bool m_bRunning;
 	bool m_bInLowPriority;

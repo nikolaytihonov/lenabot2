@@ -4,6 +4,8 @@
 #include "vkrequest.h"
 #include "bot.h"
 #include <boost/format.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/split.hpp>
 
 //table leto_groups
 //id	name	tag_name	last_post_id
@@ -13,6 +15,22 @@
 
 //все команды данного сервиса требуют привелегий Leader
 //и выполняются синхронно
+
+struct photo_s {
+	int id;
+	int owner_id;
+	int post_id;
+
+	inline bool operator==(const struct photo_s& other)
+	{
+		return this->id == other.id;
+	}
+
+	inline bool operator==(int post_id)
+	{
+		return this->post_id == post_id;
+	}
+};
 
 class LetoService : public Service, public ILeto
 {
@@ -26,7 +44,16 @@ public:
 	virtual std::string GetRandomArt(std::string tag);
 private:
 	bool Mirror(std::string id,std::string tags);
-	bool MirrorInternal(std::string id,std::string tags,std::vector<int>& last_posts);
+	bool MirrorInternal(std::string id,std::string tags,
+		std::vector<struct photo_s>& last_posts);
+	void Update();
+
+	bool ScanWall(int id,
+		std::vector<struct photo_s>& out,
+		std::vector<struct photo_s>& last);
+	void UpdateWall(int id);
+
+	void OnNewPhoto(int group,const struct photo_s& photo,std::string tags);
 } _leto;
 
 ILeto* leto = &_leto;
@@ -86,23 +113,22 @@ bool LetoService::ProcessCommand(const Command& cmd)
 		art->SetParam("attachment",photo);
 		services.Request(art);
 	}
+	/*else if(cmd.GetName() == "leto_update" && services.CheckAdmin(Leader))
+	{
+		Update();
+		return true;
+	}*/
 	return false;
 }
 
-struct photo_s {
-	int id;
-	int owner_id;
-	int post_id;
-};
-
 bool LetoService::Mirror(std::string id,std::string tags)
 {
-	std::vector<int> last;
+	std::vector<struct photo_s> last;
 	return MirrorInternal(id,tags,last);
 }
 
 bool LetoService::MirrorInternal(std::string screen,std::string tags,
-	std::vector<int>& last_posts)
+		std::vector<struct photo_s>& last_posts)
 {
 	json_value* pVal;
 	std::string name;
@@ -121,55 +147,8 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 	services.Reply(boost::str(boost::format("Начинаю клонировать %d") % id));
 	std::vector<struct photo_s> photos;
 
-	int offset = 0;
-	int count = 100;
-	do {
-		VkRequest* get = new VkRequest("wall.get");
-		get->SetParam("owner_id",-id);
-		get->SetParam("offset",offset);
-		get->SetParam("count",count);
-		bot.GetAPI()->Request(get,&pVal);
+	if(!ScanWall(id,photos,last_posts)) return false;
 
-		auto& res = (*pVal)["response"];
-		auto& posts = res["items"];
-		count = (int)posts.u.array.length;
-
-		for(int i = 0; i < count; i++)
-		{
-			auto& post = posts[i];
-			if(post["attachments"].type == json_none) continue;
-
-			if(std::find(last_posts.begin(),last_posts.end(),
-				(int)post["id"]) != last_posts.end())
-			{
-				count = 0;
-				break;
-			}
-
-			auto& attachments = post["attachments"];
-			if(attachments.type != json_array
-				|| attachments.u.array.length < 1) continue;
-			for(int j = 0; j < attachments.u.array.length; j++)
-			{
-				auto& attach = attachments[j];
-				if(std::string((const char*)attach["type"]) != "photo")
-					continue;
-				auto& photo = attach["photo"];
-
-				struct photo_s ph;
-				ph.id = (int)photo["id"];
-				ph.owner_id = (int)photo["owner_id"];
-				ph.post_id = (int)post["id"];
-				photos.push_back(ph);
-			}
-		}
-
-		json_value_free(pVal);
-		offset += count;
-	} while(count >= 100);
-
-	std::reverse(photos.begin(),photos.end());
-	
 	db.Execute(boost::str(
 		boost::format("INSERT OR REPLACE INTO leto_groups (id,type,name,tags)"
 		" VALUES ('%d','group','%s','%s');")
@@ -197,8 +176,116 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 	}
 
 	services.Reply("Клонирование завершено");
+}
 
+//bool LetoService::MirrorInternal(std::string screen,std::string tags,
+//	std::vector<int>& last_posts)
+bool LetoService::ScanWall(int id,
+	std::vector<struct photo_s>& out,
+	std::vector<struct photo_s>& last)
+{
+	json_value* pVal;
+	std::string name;
+
+	int offset = 0;
+	int count = 100;
+	do {
+		VkRequest* get = new VkRequest("wall.get");
+		get->SetParam("owner_id",-id);
+		get->SetParam("offset",offset);
+		get->SetParam("count",count);
+		bot.GetAPI()->Request(get,&pVal);
+
+		auto& res = (*pVal)["response"];
+		auto& posts = res["items"];
+		count = (int)posts.u.array.length;
+
+		for(int i = 0; i < count; i++)
+		{
+			auto& post = posts[i];
+			if(post["attachments"].type == json_none) continue;
+
+			if(std::find(last.begin(),last.end(),
+				(int)post["id"]) != last.end())
+			{
+				count = 0;
+				break;
+			}
+
+			auto& attachments = post["attachments"];
+			if(attachments.type != json_array
+				|| attachments.u.array.length < 1) continue;
+			for(int j = 0; j < attachments.u.array.length; j++)
+			{
+				auto& attach = attachments[j];
+				if(std::string((const char*)attach["type"]) != "photo")
+					continue;
+				auto& photo = attach["photo"];
+
+				struct photo_s ph;
+				ph.id = (int)photo["id"];
+				ph.owner_id = (int)photo["owner_id"];
+				ph.post_id = (int)post["id"];
+				out.push_back(ph);
+			}
+		}
+
+		json_value_free(pVal);
+		offset += count;
+	} while(count >= 100);
+
+	std::reverse(out.begin(),out.end());
 	return true;
+}
+
+static int leto_load_photo(void* data,int,char** argv,char**)
+{
+	struct photo_s photo;
+	photo.post_id = atoi(argv[0]);
+	photo.owner_id = atoi(argv[1]);
+	photo.id = atoi(argv[2]);
+	((std::vector<struct photo_s>*)data)->push_back(photo);
+	return 0;
+}
+
+//CREATE TABLE leto_groups (id PRIMARY KEY,type,name,tags);
+
+static int leto_get_tags(void* data,int,char** argv,char**)
+{
+	*(std::string*)data = std::string(argv[3]);
+	return 0;
+}
+
+void LetoService::UpdateWall(int id)
+{
+	std::vector<struct photo_s> last;
+	std::vector<struct photo_s> update;
+
+	try {
+		db.Execute(boost::str(
+			boost::format("SELECT * FROM leto_group_%d"
+			" ORDER BY CAST(post_id as INTEGER) DESC LIMIT 5;")
+				% id),&leto_load_photo,&last);
+		ScanWall(id,update,last);
+		
+		std::string tags;
+		db.Execute(boost::str(
+			boost::format("SELECT * FROM leto_groups WHERE id='%d' LIMIT 1;")
+				% id),leto_get_tags,&tags);
+
+		for(auto it = update.begin(); it != update.end(); ++it)
+		{
+			OnNewPhoto(id,*it,tags);
+
+			/*db.Execute(boost::str(
+				boost::format("INSERT INTO leto_group_%d (post_id,owner_id,id)"
+				" VALUES ('%d','%d','%d');") % id % it->post_id % it->owner_id % it->id));*/
+		}
+	} catch(std::exception& e) {
+		bot.Send(ConvMainChat,boost::str(
+			boost::format("LetoService::UpdateWall исключение: %s")
+				% std::string(e.what())),false);
+	}
 }
 
 static int leto_find_id(void* pId,int,char** argv,char**)
@@ -227,4 +314,57 @@ std::string LetoService::GetRandomArt(std::string tag)
 			% id),leto_get_photo,&photo);
 
 	return photo;
+}
+
+//CREATE TABLE leto_groups (id PRIMARY KEY,type,name,tags);
+
+struct leto_group_s {
+	int id;
+	std::string type;
+	std::string name;
+	std::string tags;
+};
+
+static int leto_load_groups(void* data,int,char** argv,char**)
+{
+	struct leto_group_s g;
+	g.id = atoi(argv[0]);
+	g.type = std::string(argv[1]);
+	g.name = std::string(argv[2]);
+	g.tags = std::string(argv[3]);
+	((std::vector<struct leto_group_s>*)data)->push_back(g);
+	return 0;
+}
+
+void LetoService::Update()
+{
+	std::vector<struct leto_group_s> groups;
+	db.Execute("SELECT * FROM leto_groups WHERE type='group';",
+		leto_load_groups,&groups);
+	for(auto it = groups.begin(); it != groups.end(); ++it)
+		UpdateWall(it->id);
+}
+
+void LetoService::OnNewPhoto(int group,const struct photo_s& photo,std::string _tags)
+{
+	std::stringstream text;
+	std::vector<std::string> tags;
+	text << "#БесконечноеЛето #Бесконечное_Лето #Совёнок #Летосфера";
+	boost::split(tags,_tags,boost::is_any_of(","));
+	for(auto it = tags.begin(); it != tags.end(); ++it)
+	{
+		std::string tag = *it;
+		if(tag == "Комми-Лена") tag = "Лена";
+		else if(tag == "Цитадель") tag = "Лена";
+		else if(tag == "БС") continue;
+		text << " #" << tag;
+	}
+
+	VkRequest* post = new VkRequest("wall.post");
+	post->SetParam("owner_id",-bot.GetMirrorGroup());
+	post->SetParam("from_group",1);
+	post->SetParam("attachments",boost::str(
+		boost::format("photo%d_%d") % photo.owner_id % photo.id));
+	post->AddMultipart(VkPostMultipart("message",text.str(),VkPostMultipart::Text));
+	bot.GetAPI()->RequestAsync(post);
 }

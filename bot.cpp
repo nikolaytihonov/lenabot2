@@ -45,6 +45,8 @@ void Bot::Start(std::string config_file)
 	m_LogFile = std::string((const char*)conf["logfile"]);
 	m_iMainConv = (int)conf["mainconv"];
 	m_iAdminUser = (int)conf["adminuser"];
+	m_iMainGroup = (int)conf["maingroup"];
+	m_iMirrorGroup = (int)conf["mirrorgroup"];
 
 	json_value_free(pConf);
 
