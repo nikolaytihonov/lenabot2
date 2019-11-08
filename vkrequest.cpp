@@ -4,7 +4,83 @@
 #include "service.h"
 #include "bot.h"
 #include <sstream>
+#include <fstream>
 #include <boost/format.hpp>
+
+static int download_file(void *ptr,size_t size,size_t nmemb,void* stream)
+{
+	int written = size*nmemb;
+	((std::ofstream*)stream)->write((const char*)ptr,written);
+	return written;
+}
+
+std::string VkMethods::DownloadPhoto(VkApi* api,int owner,int id,std::string path)
+{
+	json_value* pVal;
+	try {
+		VkRequest* get = new VkRequest("photos.getById");
+		get->SetParam("photos",boost::str(
+			boost::format("%d_%d") % owner % id));
+		get->SetParam("photo_sizes",1);
+		api->Request(get,&pVal);
+	} catch(std::exception& e) {
+		BotError("%s\n",e.what());
+		return "";
+	}
+
+	std::string url = "";
+	{
+		boost::shared_ptr<json_value> val(pVal,json_value_free);
+		auto& photo = (*val)["response"][0];
+		auto& sizes = photo["sizes"];
+		
+		const char* types = "wzyrqpoxms";
+		for(int i = 0; (i < strlen(types)) && url.empty(); i++)
+		{
+			for(int j = 0; j < sizes.u.array.length; j++)
+			{
+				auto& size = sizes[j];
+				char type = ((const char*)size["type"])[0];
+				if(type == types[i])
+				{
+					url = std::string((const char*)size["url"]);
+					break;
+				}
+			}
+		}
+	}
+
+	std::string fileName = "";
+	CURL* pCurl = curl_easy_init();
+	{
+		boost::shared_ptr<CURL> curl(pCurl,curl_easy_cleanup);
+		curl_easy_setopt(curl.get(),CURLOPT_URL,url.c_str());
+		curl_easy_setopt(curl.get(),CURLOPT_USERAGENT,"VkMethods::DownloadPhoto");
+#ifdef USE_TOR
+		curl_easy_setopt(curl.get(),CURLOPT_PROXY,"socks5h://127.0.0.1:9050");
+#endif
+		
+		//get file name
+		const char* pUrl = url.c_str();
+		const char* pName = strrchr(pUrl,'/');
+		if(!pName) return "";
+		else pName++;
+
+		fileName = path + std::string(pName);
+		std::ofstream out(fileName,std::ios::out|std::ios::binary);
+		curl_easy_setopt(curl.get(),CURLOPT_WRITEFUNCTION,download_file);
+		curl_easy_setopt(curl.get(),CURLOPT_WRITEDATA,&out);
+
+		CURLcode res = curl_easy_perform(curl.get());
+		out.close();
+		if(res != CURLE_OK)
+		{
+			BotError("Failed to download %s CURLE %d\n",fileName.c_str(),res);
+			return "";
+		}
+	}
+	return fileName;
+}
 
 VkRequest::VkRequest()
 	: m_Method(""),

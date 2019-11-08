@@ -6,6 +6,7 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <boost/filesystem.hpp>
 
 //table leto_groups
 //id	name	tag_name	last_post_id
@@ -32,6 +33,22 @@ struct photo_s {
 	}
 };
 
+struct album_s {
+	int album_id;
+	int clone_id;
+	std::string tags;
+
+	inline bool operator==(const struct album_s& other)
+	{
+		return this->clone_id == other.clone_id;
+	}
+	
+	inline bool operator==(int clone_id)
+	{
+		return this->clone_id == clone_id;
+	}
+};
+
 class LetoService : public Service, public ILeto
 {
 public:
@@ -42,7 +59,7 @@ public:
 	virtual bool ProcessCommand(const Command& cmd);
 
 	virtual std::string GetRandomArt(std::string tag);
-private:
+	
 	bool Mirror(std::string id,std::string tags);
 	bool MirrorInternal(std::string id,std::string tags,
 		std::vector<struct photo_s>& last_posts);
@@ -53,15 +70,35 @@ private:
 		std::vector<struct photo_s>& last);
 	void UpdateWall(int id);
 
+	std::string ConvertTag(std::string tag);
 	void OnNewPhoto(int group,const struct photo_s& photo,std::string tags);
+	std::string MirrorPhoto(int group,const struct photo_s& photo);
+private:
+	std::vector<struct album_s> m_Albums;
 } _leto;
 
 ILeto* leto = &_leto;
+
+//mirror_albums
+//album_id	clone_id	tags
+
+static int leto_load_albums(void* data,int,char** argv,char**)
+{
+	struct album_s album;
+	album.album_id = atoi(argv[0]);
+	album.clone_id = atoi(argv[1]);
+	album.tags = std::string(argv[2]);
+	((std::vector<struct album_s>*)data)->push_back(album);
+	return 0;
+}
 
 void LetoService::Load()
 {
 	if(!db.TableExists("leto_groups"))
 		db.Execute("CREATE TABLE leto_groups (id PRIMARY KEY,type,name,tags);");
+	if(!db.TableExists("mirror_albums"))
+		db.Execute("CREATE TABLE mirror_albums (album_id PRIMARY KEY,clone_id,tags);");
+	db.Execute("SELECT * FROM mirror_albums;",leto_load_albums,&m_Albums);
 }
 
 static int leto_load(void* str,int,char** argv,char**)
@@ -112,6 +149,13 @@ bool LetoService::ProcessCommand(const Command& cmd)
 		art->SetParam("random_id",bot.GetMessageRandomId());
 		art->SetParam("attachment",photo);
 		services.Request(art);
+	}
+	else if(cmd.GetName() == "leto_photo" && services.CheckAdmin(Leader))
+	{
+		struct photo_s photo;
+		photo.owner_id = atoi(cmd.Arg(1).c_str());
+		photo.id = atoi(cmd.Arg(2).c_str());
+		MirrorPhoto(0,photo);
 	}
 	/*else if(cmd.GetName() == "leto_update" && services.CheckAdmin(Leader))
 	{
@@ -272,7 +316,7 @@ void LetoService::UpdateWall(int id)
 		db.Execute(boost::str(
 			boost::format("SELECT * FROM leto_groups WHERE id='%d' LIMIT 1;")
 				% id),leto_get_tags,&tags);
-
+		
 		for(auto it = update.begin(); it != update.end(); ++it)
 		{
 			OnNewPhoto(id,*it,tags);
@@ -345,6 +389,13 @@ void LetoService::Update()
 		UpdateWall(it->id);
 }
 
+std::string LetoService::ConvertTag(std::string tag)
+{
+	if(tag == "Комми-Лена") return "Лена";
+	else if(tag == "Цитадель") return "Лена";
+	else if(tag == "БС") return "";
+}
+
 void LetoService::OnNewPhoto(int group,const struct photo_s& photo,std::string _tags)
 {
 	std::stringstream text;
@@ -353,10 +404,8 @@ void LetoService::OnNewPhoto(int group,const struct photo_s& photo,std::string _
 	boost::split(tags,_tags,boost::is_any_of(","));
 	for(auto it = tags.begin(); it != tags.end(); ++it)
 	{
-		std::string tag = *it;
-		if(tag == "Комми-Лена") tag = "Лена";
-		else if(tag == "Цитадель") tag = "Лена";
-		else if(tag == "БС") continue;
+		std::string tag = ConvertTag(*it);
+		if(tag.empty()) continue;
 		text << " #" << tag;
 	}
 
@@ -367,4 +416,84 @@ void LetoService::OnNewPhoto(int group,const struct photo_s& photo,std::string _
 		boost::format("photo%d_%d") % photo.owner_id % photo.id));
 	post->AddMultipart(VkPostMultipart("message",text.str(),VkPostMultipart::Text));
 	bot.GetAPI()->RequestAsync(post);
+}
+
+//1. Download photo
+//1.1. If album doesn't exists, then create it
+//2. Upload to main mirror album
+
+std::string LetoService::MirrorPhoto(int group,const struct photo_s& photo)
+{
+	std::string path = boost::str(
+		boost::format("leto/%d/") % group);
+	boost::filesystem::create_directories(
+		boost::filesystem::path(path));
+
+	std::string file = VkMethods::DownloadPhoto(
+		bot.GetAPI(),photo.owner_id,photo.id,path);
+	if(file.empty())
+		return "photo0_0";
+
+	//Проверка на альбом
+	auto it = std::find(m_Albums.begin(),m_Albums.end(),group);
+	if(it == m_Albums.end())
+	{
+		//Создать альбом
+		struct album_s album;
+
+		//Найти тэги группы
+		std::string tags = "";
+		db.Execute(boost::str(
+			boost::format("SELECT * FROM leto_groups WHERE id='%d';")
+				% group),leto_get_tags,&tags);
+
+		VkRequest* req = new VkRequest("photos.createAlbum");
+		req->SetParam("title",boost::str(
+			boost::format("%s-##%08X-04X")
+				% ConvertTag(tags) % group % rand()));
+		req->SetParam("description",ConvertTag(tags));
+		req->SetParam("upload_by_admins_only",1);
+
+		json_value* pVal;
+		bot.GetAPI()->Request(req,&pVal);
+		{
+			boost::shared_ptr<json_value> val(pVal,json_value_free);
+
+			auto& res = (*val)["response"];
+			album.album_id = (int)res["id"];
+			album.clone_id = group;
+			album.tags = tags;
+			m_Albums.push_back(album);
+
+			db.Execute(boost::str(
+				boost::format("INSERT INTO mirror_albums (album_id,clone_id,tags)"
+					" VALUES ('%d','%d','%s');") 
+						% album.album_id
+						% album.clone_id
+						% sql_str(album.tags)));
+		}
+
+		it = std::find(m_Albums.begin(),m_Albums.end(),group);
+	}
+
+	std::string upload_url;
+	{
+		json_value* pVal;
+		VkRequest* get = new VkRequest("photos.getUploadServer");
+		get->SetParam("album_id",it->album_id);
+		get->SetParam("group_id",bot.GetMirrorGroup());
+		bot.GetAPI()->Request(get,&pVal);
+		boost::shared_ptr<json_value> val(pVal,json_value_free);
+
+		upload_url = std::string((const char*)(*(val.get()))["upload_url"]);
+	}
+
+	std::string server,photos_list,hash;
+	int aid;
+	{
+		json_value* pVal;
+		VkRequest* upload = new VkRequest("");
+		
+	}
+	return "";
 }

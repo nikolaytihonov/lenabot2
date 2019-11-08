@@ -60,6 +60,7 @@ public:
 	int GetAdminUser(){return m_iAdminUser;}
 	int GetMainGroup(){return m_iMainGroup;}
 	int GetMirrorGroup(){return m_iMirrorGroup;}
+	const std::vector<int>& GetMirrors(){return m_Mirrors;}
 	
 	void OnRequestPreAdd(IVkRequest* req);
 	
@@ -75,6 +76,7 @@ private:
 	int m_iAdminUser;
 	int m_iMainGroup;
 	int m_iMirrorGroup;
+	std::vector<int> m_Mirrors;
 	VkApi* m_pVk;
 	bool m_bRunning;
 	bool m_bInLowPriority;

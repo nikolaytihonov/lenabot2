@@ -148,7 +148,7 @@ void ServiceSystem::FinishCommand(const VkMessage& msg)
 		try {
 			m_Reply.str("");
 			bool bOk = svc->ProcessCommand(m_Cmd);
-			Reply(m_Reply.str());
+			if(!m_Reply.str().empty()) Reply(m_Reply.str());
 			m_Reply.str("");
 			if(bOk) break;
 		} catch(std::exception& e) {

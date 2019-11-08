@@ -46,7 +46,12 @@ void Bot::Start(std::string config_file)
 	m_iMainConv = (int)conf["mainconv"];
 	m_iAdminUser = (int)conf["adminuser"];
 	m_iMainGroup = (int)conf["maingroup"];
-	m_iMirrorGroup = (int)conf["mirrorgroup"];
+	//m_iMirrorGroup = (int)conf["mirrorgroup"];
+	auto& mirror = conf["mirror"];
+	m_iMirrorGroup = (int)mirror["main"];
+	auto& mirrors = mirror["mirrors"];
+	for(int i = 0; i < mirrors.u.array.length; i++)
+		m_Mirrors.push_back(mirrors[i]);
 
 	json_value_free(pConf);
 

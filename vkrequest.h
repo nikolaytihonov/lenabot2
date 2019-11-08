@@ -34,6 +34,11 @@ typedef struct conv_s {
 
 class VkApi;
 
+namespace VkMethods
+{
+	std::string DownloadPhoto(VkApi* api,int owner,int id,std::string path);
+}
+
 class VkPostMultipart
 {
 public:
