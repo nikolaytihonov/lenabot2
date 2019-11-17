@@ -8,13 +8,13 @@
 #include "json/json.h"
 #include "vkapicontroller.h"
 
-typedef enum convtype_t {
+typedef enum {
 	ConvMainChat = -1,
 	ConvUser,
 	ConvChat,
 	ConvGroup,
 	ConvEmail
-};
+} convtype_t;
 
 typedef struct conv_s {
 	int id;

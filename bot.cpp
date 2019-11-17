@@ -39,13 +39,15 @@ void Bot::Start(std::string config_file)
 
 	json_value* pConf = json_parse(json.c_str(),json.size());
 	json_value& conf = *pConf;
-	if(!pConf) throw std::exception("Bad config JSON");
+	if(!pConf) throw std::runtime_error("Bad config JSON");
 
 	m_Token = std::string((const char*)conf["token"]);
 	m_LogFile = std::string((const char*)conf["logfile"]);
 	m_iMainConv = (int)conf["mainconv"];
 	m_iAdminUser = (int)conf["adminuser"];
 	m_iMainGroup = (int)conf["maingroup"];
+	m_LenaDir = std::string((const char*)conf["lenapack"]);
+	m_AlisaDir = std::string((const char*)conf["alisapack"]);
 	//m_iMirrorGroup = (int)conf["mirrorgroup"];
 	auto& mirror = conf["mirror"];
 	m_iMirrorGroup = (int)mirror["main"];
@@ -117,13 +119,13 @@ void Bot::LoadConversations()
 				count = (int)res["count"];
 
 				if(items.type != json_array)
-					throw std::exception("items.type != json_array");
+					throw std::runtime_error("items.type != json_array");
 				for(int i = 0; i < items.u.array.length; i++)
 				{
 					auto& conv = items[i]["conversation"];
 					auto& peer = conv["peer"];
 					if(peer.type == json_none)
-						throw std::exception("peer.type == json_none");
+						throw std::runtime_error("peer.type == json_none");
 					conv_t cv;
 					cv.id = (int)peer["id"];
 					cv.local_id = (int)peer["local_id"];

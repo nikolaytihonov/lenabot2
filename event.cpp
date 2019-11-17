@@ -129,6 +129,7 @@ void Event::Remove()
 static void* eventsystem_thread(void* arg)
 {
 	((EventSystem*)arg)->Run();
+	return NULL;
 }
 
 void EventSystem::Start()

@@ -61,6 +61,8 @@ public:
 	int GetMainGroup(){return m_iMainGroup;}
 	int GetMirrorGroup(){return m_iMirrorGroup;}
 	const std::vector<int>& GetMirrors(){return m_Mirrors;}
+	std::string GetLenaDir(){return m_LenaDir;}
+	std::string GetAlisaDir(){return m_AlisaDir;}
 	
 	void OnRequestPreAdd(IVkRequest* req);
 	
@@ -76,6 +78,8 @@ private:
 	int m_iAdminUser;
 	int m_iMainGroup;
 	int m_iMirrorGroup;
+	std::string m_LenaDir;
+	std::string m_AlisaDir;
 	std::vector<int> m_Mirrors;
 	VkApi* m_pVk;
 	bool m_bRunning;

@@ -38,8 +38,8 @@ public:
 
 	virtual void Load()
 	{
-		AddFolder("Лена","D:/clublenochki");
-		AddFolder("Алиса","D:/alisa");
+		AddFolder("Лена",bot.GetLenaDir());
+		AddFolder("Алиса",bot.GetAlisaDir());
 	}
 
 	virtual bool ProcessMessage(const VkMessage& msg)
@@ -84,7 +84,7 @@ public:
 		directory_iterator end_it;
 		for(directory_iterator it(p); it != end_it; ++it)
 			if(is_regular_file(it->path())) files.push_back(it->path().string());
-		m_Arts.insert(std::make_pair<std::string,std::vector<std::string>>(artName,files));
+		m_Arts.insert(std::pair<std::string,std::vector<std::string>>(artName,files));
 	}
 
 	void SendArt(int conv_id,std::string artName,int reply_to = 0)

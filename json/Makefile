@@ -3,7 +3,7 @@ AR=ar
 OBJ=json.o
 OBJ_DIR=obj/
 OUT=libjson.a
-	
+
 %.o: %.cpp
 	$(CC) -c $< -o $(OBJ_DIR)$@
 

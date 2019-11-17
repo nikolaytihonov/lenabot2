@@ -3,6 +3,7 @@
 #include "vkapi.h"
 #include "event.h"
 #include "json/json.h"
+#include <iostream>
 #include <boost/thread/mutex.hpp>
 #include <fstream>
 #include <stdarg.h>
@@ -44,6 +45,8 @@ static boost::mutex s_Mutex;
 
 void BotLog(const char* pFmt,...)
 {
+	//На линукс хосте нам не нужны логи, пока-что.
+#ifndef __linux__
 	char szBuf[1024] = {0};
 	va_list ap;
 	
@@ -65,6 +68,7 @@ void BotLog(const char* pFmt,...)
 	std::cout << '[' << szTime << "] ";
 	ConsoleWriteLine(szBuf);
 	s_Mutex.unlock();
+#endif
 }
 
 void BotError(const char* pFmt,...)
@@ -95,7 +99,7 @@ void BotError(const char* pFmt,...)
 std::string ConsoleReadLine(int uMax)
 {
 	std::string in;
-#ifndef __LINUX__
+#ifndef __linux__
 	DWORD dwIn;
 	wchar_t* pInput = new wchar_t[uMax];
 	ReadConsoleW(GetStdHandle(STD_INPUT_HANDLE),pInput,uMax,&dwIn,NULL);
@@ -115,7 +119,7 @@ std::string ConsoleReadLine(int uMax)
 
 void ConsoleWriteLine(std::string text,bool bError)
 {
-#ifndef __LINUX__
+#ifndef __linux__
 	DWORD w = 0;
 	int uLen = MultiByteToWideChar(CP_UTF8,0,text.c_str(),(int)text.size(),NULL,0);
 	wchar_t* pBuf = new wchar_t[uLen];

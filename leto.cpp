@@ -220,6 +220,7 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 	}
 
 	services.Reply("Клонирование завершено");
+	return true;
 }
 
 //bool LetoService::MirrorInternal(std::string screen,std::string tags,
@@ -394,6 +395,7 @@ std::string LetoService::ConvertTag(std::string tag)
 	if(tag == "Комми-Лена") return "Лена";
 	else if(tag == "Цитадель") return "Лена";
 	else if(tag == "БС") return "";
+	return tag;
 }
 
 void LetoService::OnNewPhoto(int group,const struct photo_s& photo,std::string _tags)

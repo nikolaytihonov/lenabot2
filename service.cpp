@@ -124,7 +124,7 @@ bool ServiceSystem::ParseMessage(int msg_id,int user_id,std::string text)
 			new VkCommandGetMessage(msg_id)
 		);
 		//m_Cmds[msg_id] = cmd;
-		m_Cmds.insert(std::make_pair<int,Command>(msg_id,cmd));
+		m_Cmds.insert(std::pair<int,Command>(msg_id,cmd));
 		return true;
 	}
 	return false;

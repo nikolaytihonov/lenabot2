@@ -9,6 +9,7 @@
 #include <boost/shared_ptr.hpp>
 #include "stats.h"
 
+#ifndef __linux__
 int gettimeofday(struct timeval * tp, struct timezone * tzp)
 {
     // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
@@ -29,6 +30,9 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp)
     tp->tv_usec = (long) (system_time.wMilliseconds * 1000);
     return 0;
 }
+#else
+#include <sys/time.h>
+#endif
 
 Time Time::CurTime()
 {
