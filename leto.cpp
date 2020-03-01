@@ -146,7 +146,7 @@ bool LetoService::ProcessCommand(const Command& cmd)
 
 		VkRequest* art = new VkRequest("messages.send");
 		art->AddMultipart(VkPostMultipart("message",
-			boost::str(boost::format("Арт взят из группы %d") % group_id),
+			boost::str(boost::format("Арт взят из группы https://vk.com/club%d") % group_id),
 		VkPostMultipart::Text));
 		art->SetParam("peer_id",services.GetPeerId());
 		art->SetParam("reply_to",services.GetCommandUser().m_iMsgId);
