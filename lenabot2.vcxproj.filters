@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
+    <Filter Include="json">
+      <UniqueIdentifier>{7c0b74fc-d84c-4846-a3ff-c67f7909e014}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="bot.cpp">
@@ -63,6 +66,9 @@
     <ClCompile Include="leto.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="json\json.cpp">
+      <Filter>json</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bot.h">
@@ -106,6 +112,9 @@
     </ClInclude>
     <ClInclude Include="leto.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="json\json.h">
+      <Filter>json</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

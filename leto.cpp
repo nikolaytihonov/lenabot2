@@ -58,7 +58,7 @@ public:
 	virtual void Load();
 	virtual bool ProcessCommand(const Command& cmd);
 
-	virtual std::string GetRandomArt(std::string tag);
+	virtual std::string GetRandomArt(std::string tag,int* group_id = NULL);
 
 	bool Mirror(std::string id,std::string tags);
 	bool MirrorInternal(std::string id,std::string tags,
@@ -136,7 +136,8 @@ bool LetoService::ProcessCommand(const Command& cmd)
 	else if(cmd.GetName() == "арт")
 	{
 		if(cmd.ArgC() < 2) return false;
-		std::string photo = GetRandomArt(cmd.Arg(1));
+		int group_id;
+		std::string photo = GetRandomArt(cmd.Arg(1),&group_id);
 		if(photo.empty())
 		{
 			services << "Арт ненайден.";
@@ -144,6 +145,9 @@ bool LetoService::ProcessCommand(const Command& cmd)
 		}
 
 		VkRequest* art = new VkRequest("messages.send");
+		art->AddMultipart(VkPostMultipart("message",
+			boost::str(boost::format("Арт взят из группы %d") % group_id),
+		VkPostMultipart::Text));
 		art->SetParam("peer_id",services.GetPeerId());
 		art->SetParam("reply_to",services.GetCommandUser().m_iMsgId);
 		art->SetParam("random_id",bot.GetMessageRandomId());
@@ -351,13 +355,14 @@ static int leto_get_photo(void* data,int,char** argv,char**)
 	return 0;
 }
 
-std::string LetoService::GetRandomArt(std::string tag)
+std::string LetoService::GetRandomArt(std::string tag,int* group_id)
 {
 	int id = -1;
 	db.Execute(boost::str(
 		boost::format("SELECT * FROM leto_groups WHERE tags='%s' ORDER BY RANDOM() LIMIT 1;")
 			% sql_str(tag)),leto_find_id,&id);
 	if(id == -1) return "";
+	if(group_id) *group_id = id;
 	std::string photo = "";
 	db.Execute(boost::str(
 		boost::format("SELECT * FROM leto_group_%d ORDER BY RANDOM() LIMIT 1;")

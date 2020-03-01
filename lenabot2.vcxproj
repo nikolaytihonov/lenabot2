@@ -94,7 +94,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>D:\curl-build\lib;D:\lenabot2\x64\Debug;D:\sqlite3\x64\Release;D:\boost_1_47_0\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcurl_imp.lib;json.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcurl_imp.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -135,6 +135,7 @@
     <ClCompile Include="dbg.cpp" />
     <ClCompile Include="event.cpp" />
     <ClCompile Include="events.cpp" />
+    <ClCompile Include="json\json.cpp" />
     <ClCompile Include="leto.cpp" />
     <ClCompile Include="list.cpp" />
     <ClCompile Include="main.cpp" />
@@ -152,6 +153,7 @@
     <ClInclude Include="database.h" />
     <ClInclude Include="dbg.h" />
     <ClInclude Include="event.h" />
+    <ClInclude Include="json\json.h" />
     <ClInclude Include="leto.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="service.h" />
