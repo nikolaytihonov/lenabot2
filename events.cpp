@@ -1,6 +1,7 @@
 #include "event.h"
 #include "bot.h"
 #include "service.h"
+#include "leto.h"
 
 extern Bot* g_pBot;
 
@@ -26,3 +27,12 @@ EVENT_FIRE_BEGIN()
 EVENT_FIRE_END()
 
 END_TIMER(db_save)
+
+//Таймер автоматического обновления базы артов (каждые 12 часов)
+DECLARE_TIMER(leto_update,Time(60*60*12,0))
+
+EVENT_FIRE_BEGIN()
+    leto->Update();
+EVENT_FIRE_END()
+
+END_TIMER(leto_update)

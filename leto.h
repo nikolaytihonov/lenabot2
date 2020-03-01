@@ -7,6 +7,7 @@ class ILeto
 {
 public:
 	virtual std::string GetRandomArt(std::string tag) = 0;
+	virtual void Update() = 0;
 };
 
 extern ILeto* leto;

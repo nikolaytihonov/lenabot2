@@ -1,0 +1,257 @@
+# depslib dependency file v1.0
+1583037035 source:/home/adriane/lenabot2/crash.cpp
+	"crash.h"
+	"dbg.h"
+	"bot.h"
+	<stdio.h>
+	<stdlib.h>
+	<signal.h>
+
+1583037035 /home/adriane/lenabot2/crash.h
+
+1583037035 /home/adriane/lenabot2/dbg.h
+	<string>
+
+1583037035 /home/adriane/lenabot2/bot.h
+	<string>
+	<string.h>
+	<vector>
+	"json/json.h"
+	"vkapi.h"
+
+1583037035 /home/adriane/lenabot2/json/json.h
+	<inttypes.h>
+	<stdlib.h>
+	<string.h>
+
+1583042907 /home/adriane/lenabot2/vkapi.h
+	"vkrequest.h"
+	<string>
+	<vector>
+	<map>
+	<queue>
+	<exception>
+	<boost/thread.hpp>
+	<boost/shared_ptr.hpp>
+	<curl/curl.h>
+	<stdint.h>
+	<time.h>
+	"json/json.h"
+	"vkapicontroller.h"
+
+1583037035 /home/adriane/lenabot2/vkrequest.h
+	<string>
+	<vector>
+	<map>
+	<curl/curl.h>
+	"json/json.h"
+	"vkapicontroller.h"
+
+1583037035 /home/adriane/lenabot2/vkapicontroller.h
+	"json/json.h"
+
+1583037035 source:/home/adriane/lenabot2/database.cpp
+	"database.h"
+	<stdio.h>
+	<boost/format.hpp>
+	<boost/algorithm/string.hpp>
+	"dbg.h"
+
+1583037035 /home/adriane/lenabot2/database.h
+	<string>
+	<exception>
+	<sqlite3.h>
+	<stddef.h>
+	<string>
+
+1583037035 source:/home/adriane/lenabot2/json/json.cpp
+	"json.h"
+	<stdio.h>
+	<string.h>
+	<ctype.h>
+	<math.h>
+
+1583043434 source:/home/adriane/lenabot2/leto.cpp
+	"leto.h"
+	"service.h"
+	"database.h"
+	"vkrequest.h"
+	"bot.h"
+	<boost/format.hpp>
+	<boost/algorithm/string.hpp>
+	<boost/algorithm/string/split.hpp>
+	<boost/filesystem.hpp>
+
+1583043423 /home/adriane/lenabot2/leto.h
+	<string>
+
+1583037035 /home/adriane/lenabot2/service.h
+	<string.h>
+	<string>
+	<sstream>
+	<map>
+	"vkapi.h"
+	"list.h"
+	"json/json.h"
+	"command.h"
+	"admin.h"
+
+1583037035 /home/adriane/lenabot2/list.h
+	<stddef.h>
+
+1583042870 /home/adriane/lenabot2/command.h
+	<string>
+	<vector>
+	"vkrequest.h"
+
+1583037035 /home/adriane/lenabot2/admin.h
+	<string>
+
+1583037035 source:/home/adriane/lenabot2/main.cpp
+	"bot.h"
+	"event.h"
+	"crash.h"
+	<stdio.h>
+	<string.h>
+	<string>
+	"command.h"
+	"dbg.h"
+
+1583037035 /home/adriane/lenabot2/event.h
+	<time.h>
+	<boost/thread.hpp>
+	<string>
+	"vkapi.h"
+	"list.h"
+	"service.h"
+
+1583042948 source:/home/adriane/lenabot2/admin.cpp
+	"admin.h"
+	"vkapi.h"
+	"service.h"
+	"database.h"
+	"bot.h"
+	<boost/format.hpp>
+	<boost/lexical_cast.hpp>
+
+1583042942 source:/home/adriane/lenabot2/bot.cpp
+	"bot.h"
+	<stdint.h>
+	<fstream>
+	<algorithm>
+	<boost/thread.hpp>
+	<boost/algorithm/minmax.hpp>
+	<boost/tuple/tuple.hpp>
+	<boost/filesystem.hpp>
+	<boost/format.hpp>
+	"event.h"
+	"service.h"
+	"database.h"
+	"utf8/utf8.h"
+	"dbg.h"
+
+1583037035 /home/adriane/lenabot2/utf8/utf8.h
+	"utf8/checked.h"
+	"utf8/unchecked.h"
+
+1583037035 /home/adriane/lenabot2/utf8/utf8/checked.h
+	"core.h"
+	<stdexcept>
+
+1583037035 /home/adriane/lenabot2/utf8/utf8/core.h
+	<iterator>
+
+1583037035 /home/adriane/lenabot2/utf8/utf8/unchecked.h
+	"core.h"
+
+1583042874 source:/home/adriane/lenabot2/command.cpp
+	"command.h"
+	"string.h"
+	<stdint.h>
+	<boost/algorithm/string/join.hpp>
+	"utf8/utf8.h"
+	"dbg.h"
+
+1583042956 source:/home/adriane/lenabot2/dbg.cpp
+	"dbg.h"
+	"bot.h"
+	"vkapi.h"
+	"event.h"
+	"json/json.h"
+	<iostream>
+	<boost/thread/mutex.hpp>
+	<fstream>
+	<stdarg.h>
+	<string>
+	<vector>
+	<time.h>
+
+1583043184 source:/home/adriane/lenabot2/event.cpp
+	"event.h"
+	<time.h>
+	"database.h"
+	"dbg.h"
+	"dbg.h"
+	<boost/format.hpp>
+
+1583037035 source:/home/adriane/lenabot2/service.cpp
+	"service.h"
+	<boost/algorithm/string.hpp>
+	"vkrequest.h"
+	"bot.h"
+	<boost/format.hpp>
+
+1583037035 source:/home/adriane/lenabot2/services.cpp
+	"service.h"
+	"event.h"
+	"vkapi.h"
+	"bot.h"
+	"vkrequest.h"
+	<string>
+	<vector>
+	<string.h>
+	<stdlib.h>
+	<time.h>
+	<boost/filesystem.hpp>
+	"leto.h"
+
+1583037035 source:/home/adriane/lenabot2/stats.cpp
+	"stats.h"
+	"dbg.h"
+
+1583037035 /home/adriane/lenabot2/stats.h
+	"vkapi.h"
+	"event.h"
+	"service.h"
+	"bot.h"
+
+1583043463 source:/home/adriane/lenabot2/vkapi.cpp
+	"vkapi.h"
+	<stdio.h>
+	<stdlib.h>
+	<iterator>
+	<boost/format.hpp>
+	<boost/algorithm/string.hpp>
+	<boost/algorithm/string/split.hpp>
+	<boost/lexical_cast.hpp>
+	<boost/shared_ptr.hpp>
+	"stats.h"
+	<sys/time.h>
+	"dbg.h"
+
+1583043781 source:/home/adriane/lenabot2/events.cpp
+	"event.h"
+	"bot.h"
+	"service.h"
+	"leto.h"
+
+1583043755 source:/home/adriane/lenabot2/vkrequest.cpp
+	"vkrequest.h"
+	"vkapi.h"
+	"dbg.h"
+	"service.h"
+	"bot.h"
+	<sstream>
+	<fstream>
+	<boost/format.hpp>
+

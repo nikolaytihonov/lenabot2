@@ -42,7 +42,7 @@ struct album_s {
 	{
 		return this->clone_id == other.clone_id;
 	}
-	
+
 	inline bool operator==(int clone_id)
 	{
 		return this->clone_id == clone_id;
@@ -59,16 +59,16 @@ public:
 	virtual bool ProcessCommand(const Command& cmd);
 
 	virtual std::string GetRandomArt(std::string tag);
-	
+
 	bool Mirror(std::string id,std::string tags);
 	bool MirrorInternal(std::string id,std::string tags,
 		std::vector<struct photo_s>& last_posts);
-	void Update();
+	virtual void Update();
 
 	bool ScanWall(int id,
 		std::vector<struct photo_s>& out,
 		std::vector<struct photo_s>& last);
-	void UpdateWall(int id);
+	size_t UpdateWall(int id);
 
 	std::string ConvertTag(std::string tag);
 	void OnNewPhoto(int group,const struct photo_s& photo,std::string tags);
@@ -104,8 +104,8 @@ void LetoService::Load()
 static int leto_load(void* str,int,char** argv,char**)
 {
 	std::stringstream& out = *(std::stringstream*)str;
-	out << "ID " << argv[0] << " Имя \"" 
-		<< argv[2] << "\" Теги: \"" 
+	out << "ID " << argv[0] << " Имя \""
+		<< argv[2] << "\" Теги: \""
 		<< argv[3] << "\"" << '\n';
 	return 0;
 }
@@ -157,6 +157,8 @@ bool LetoService::ProcessCommand(const Command& cmd)
 		photo.id = atoi(cmd.Arg(2).c_str());
 		MirrorPhoto(0,photo);
 	}
+	else if(cmd.GetName() == "leto_update" && services.CheckAdmin(Leader))
+		Update();
 	/*else if(cmd.GetName() == "leto_update" && services.CheckAdmin(Leader))
 	{
 		Update();
@@ -204,7 +206,7 @@ bool LetoService::MirrorInternal(std::string screen,std::string tags,
 			boost::format("CREATE TABLE leto_group_%d (post_id,owner_id,id);")
 				% id));
 	}
-	
+
 	for(auto it = photos.begin(); it != photos.end(); ++it)
 	{
 		try {
@@ -260,7 +262,7 @@ bool LetoService::ScanWall(int id,
 			auto& attachments = post["attachments"];
 			if(attachments.type != json_array
 				|| attachments.u.array.length < 1) continue;
-			for(int j = 0; j < attachments.u.array.length; j++)
+			for(unsigned int j = 0; j < attachments.u.array.length; j++)
 			{
 				auto& attach = attachments[j];
 				if(std::string((const char*)attach["type"]) != "photo")
@@ -301,7 +303,7 @@ static int leto_get_tags(void* data,int,char** argv,char**)
 	return 0;
 }
 
-void LetoService::UpdateWall(int id)
+size_t LetoService::UpdateWall(int id)
 {
 	std::vector<struct photo_s> last;
 	std::vector<struct photo_s> update;
@@ -312,25 +314,28 @@ void LetoService::UpdateWall(int id)
 			" ORDER BY CAST(post_id as INTEGER) DESC LIMIT 5;")
 				% id),&leto_load_photo,&last);
 		ScanWall(id,update,last);
-		
+
 		std::string tags;
 		db.Execute(boost::str(
 			boost::format("SELECT * FROM leto_groups WHERE id='%d' LIMIT 1;")
 				% id),leto_get_tags,&tags);
-		
+
 		for(auto it = update.begin(); it != update.end(); ++it)
 		{
-			OnNewPhoto(id,*it,tags);
+			//OnNewPhoto(id,*it,tags);
 
-			/*db.Execute(boost::str(
+			db.Execute(boost::str(
 				boost::format("INSERT INTO leto_group_%d (post_id,owner_id,id)"
-				" VALUES ('%d','%d','%d');") % id % it->post_id % it->owner_id % it->id));*/
+				" VALUES ('%d','%d','%d');") % id % it->post_id % it->owner_id % it->id));
 		}
+		
+		return update.size();
 	} catch(std::exception& e) {
 		bot.Send(ConvMainChat,boost::str(
 			boost::format("LetoService::UpdateWall исключение: %s")
 				% std::string(e.what())),false);
 	}
+	return 0;
 }
 
 static int leto_find_id(void* pId,int,char** argv,char**)
@@ -386,8 +391,14 @@ void LetoService::Update()
 	std::vector<struct leto_group_s> groups;
 	db.Execute("SELECT * FROM leto_groups WHERE type='group';",
 		leto_load_groups,&groups);
+	bot.Send(ConvMainChat,"Запускаю обновление базы артов..",false);
 	for(auto it = groups.begin(); it != groups.end(); ++it)
-		UpdateWall(it->id);
+	{
+		bot.Send(ConvMainChat,boost::str(
+			boost::format("%u: %u новых постов добавлено\n")
+				% it->id % UpdateWall(it->id))
+		);
+	}
 }
 
 std::string LetoService::ConvertTag(std::string tag)
@@ -469,7 +480,7 @@ std::string LetoService::MirrorPhoto(int group,const struct photo_s& photo)
 
 			db.Execute(boost::str(
 				boost::format("INSERT INTO mirror_albums (album_id,clone_id,tags)"
-					" VALUES ('%d','%d','%s');") 
+					" VALUES ('%d','%d','%s');")
 						% album.album_id
 						% album.clone_id
 						% sql_str(album.tags)));
@@ -490,12 +501,12 @@ std::string LetoService::MirrorPhoto(int group,const struct photo_s& photo)
 		upload_url = std::string((const char*)(*(val.get()))["upload_url"]);
 	}
 
-	std::string server,photos_list,hash;
+	/*std::string server,photos_list,hash;
 	int aid;
 	{
 		json_value* pVal;
 		VkRequest* upload = new VkRequest("");
-		
-	}
+
+	}*/
 	return "";
 }

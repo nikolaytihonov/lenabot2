@@ -15,12 +15,12 @@ class Admin : public Service, public IAdmin
 {
 public:
 	Admin();
-	
+
 	virtual void Load();
 	virtual void Save();
 	virtual bool ProcessCommand(const Command& cmd);
 	virtual bool ProcessEvent(const json_value& event);
-	
+
 	void ProcessInviteUser(int peer_id,int from,int member);
 	void ProcessKickUser(int peer_id,int from,int member);
 
@@ -30,7 +30,7 @@ public:
 	virtual void UnBan(int user_id);
 	virtual std::string GetPrivelegeName(int priv);
 	virtual void Kick(int user_id);
-	
+
 	virtual  bool IsRoot(int user_id){
 		return IN_RANGE(GetPrivelege(user_id),StHelen,Leader);
 	}
@@ -126,9 +126,9 @@ void Admin::Load()
 	{
 		db.Execute("CREATE TABLE blacklist (user_id PRIMARY_KEY,reason);");
 	}
-	
+
 	db.Execute("SELECT * FROM roles;",&role_load,&m_Roles);
-	
+
 	db.Execute("SELECT * FROM user_roles;",&admin_load,&m_UserRoles);
 	for(auto it = m_UserRoles.begin(); it != m_UserRoles.end(); ++it)
 	{
@@ -179,7 +179,7 @@ bool Admin::ProcessCommand(const Command& cmd)
 	}
 	else if(cmd.GetName() == "список_рангов")
 	{
-		for(int i = 0; i < sizeof(s_PrivelegeNames)/sizeof(std::string); i++)
+		for(unsigned int i = 0; i < sizeof(s_PrivelegeNames)/sizeof(std::string); i++)
 			services << i-1 << ' ' << s_PrivelegeNames[i] << '\n';
 		return true;
 	}
@@ -199,7 +199,7 @@ bool Admin::ProcessCommand(const Command& cmd)
 			services << "Права Св.Елены никто не может иметь";
 			return true;
 		}
-		
+
 		SetPrivelege(services.GetCommandUser().m_iFwdUser,priv);
 		return true;
 	}
@@ -255,7 +255,7 @@ bool Admin::ProcessCommand(const Command& cmd)
 	}
 	else if(cmd.GetName() == "статус")
 	{
-		int user = services.GetFwdUser() 
+		int user = services.GetFwdUser()
 			? services.GetFwdUser() : services.GetCommandUser().m_iUserId;
 		if(user == 0)
 		{
@@ -263,7 +263,7 @@ bool Admin::ProcessCommand(const Command& cmd)
 			return true;
 		}
 		services << "ID: " << user << '\n'
-			<< "Уровень доступа: " 
+			<< "Уровень доступа: "
 			<< GetPrivelegeName(GetPrivelege(user)) << '\n'
 			<< "Административный доступ: " << (services.IsUserAdmin(user) ? "Да" : "Нет") << '\n'
 			<< "Роль: " << GetRoleName(user) << '\n';
@@ -373,7 +373,7 @@ void Admin::ProcessInviteUser(int peer_id,int from,int member)
 {
 	//Забаненных добавлять нельзя.
 	//Их могут добавить только те, у кого ранг Высшего адепта
-	if(IsBanned(member) && (from != 0 && 
+	if(IsBanned(member) && (from != 0 &&
 		(GetPrivelege(from) > HighAdherent && bot.GetAdminUser() != from)))
 	{
 		Kick(member);

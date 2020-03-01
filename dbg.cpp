@@ -14,8 +14,8 @@
 void BotSendMsg(const char* pStr,bool bAsync)
 {
 	//g_pBot->Send(2000000057,std::string(pStr));
-	const int conv_id = 2000000057;
-	
+	//const int conv_id = 2000000057;
+
 	BotLog("BotSendMsg %s\n",pStr);
 	bot.SetLowPriority(true);
 	bot.Send(bot.GetMainConv(),pStr,bAsync);
@@ -31,10 +31,10 @@ EVENT_FIRE_BEGIN()
 		pLog[0] = '\0';
 		for(std::string& s : m_Log)
 			strncat(pLog,s.c_str(),4096);
-		
+
 		bot.Send(bot.GetLogConv(),pLog);
 		delete[] pLog;
-		
+
 		m_Log.clear();
 	}
 EVENT_FIRE_END()
@@ -49,22 +49,22 @@ void BotLog(const char* pFmt,...)
 #ifndef __linux__
 	char szBuf[1024] = {0};
 	va_list ap;
-	
+
 	va_start(ap,pFmt);
 	vsnprintf(szBuf,1024,pFmt,ap);
 	va_end(ap);
-	
+
 	//evt_Timer_LogTimer.m_Log.push_back(std::string(szBuf));
 	char szTime[32];
 	time_t t = time(NULL);
 	struct tm* tm = localtime(&t);
 	strftime(szTime,32,"%x-%X",tm);
-	
+
 	s_Mutex.lock();
 	std::ofstream log(bot.GetLogFile(),std::ios::out|std::ios::app);
 	log << '[' << szTime << "] " << szBuf;
 	log.close();
-	
+
 	std::cout << '[' << szTime << "] ";
 	ConsoleWriteLine(szBuf);
 	s_Mutex.unlock();
@@ -75,11 +75,11 @@ void BotError(const char* pFmt,...)
 {
 	char szBuf[1024] = {0};
 	va_list ap;
-	
+
 	va_start(ap,pFmt);
 	vsnprintf(szBuf,1024,pFmt,ap);
 	va_end(ap);
-	
+
 	//evt_Timer_LogTimer.m_Log.push_back(std::string(szBuf));
 	char szTime[32];
 	time_t t = time(NULL);
@@ -90,7 +90,7 @@ void BotError(const char* pFmt,...)
 	std::ofstream log(bot.GetLogFile(),std::ios::out|std::ios::app);
 	log << '[' << szTime << "] [ERROR] " << szBuf;
 	log.close();
-	
+
 	std::cerr << '[' << szTime << "] [ERROR] ";
 	ConsoleWriteLine(szBuf,true);
 	s_Mutex.unlock();

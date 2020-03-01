@@ -1,5 +1,6 @@
 ipch/
 obj/
+bin/
 x64/
 json/Debug/
 json/obj/
@@ -7,3 +8,4 @@ json/x64/
 install.sh
 *.sdf
 *.opensdf
+*.json

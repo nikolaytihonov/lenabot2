@@ -52,16 +52,16 @@ void Bot::Start(std::string config_file)
 	auto& mirror = conf["mirror"];
 	m_iMirrorGroup = (int)mirror["main"];
 	auto& mirrors = mirror["mirrors"];
-	for(int i = 0; i < mirrors.u.array.length; i++)
+	for(unsigned int i = 0; i < mirrors.u.array.length; i++)
 		m_Mirrors.push_back(mirrors[i]);
 
 	json_value_free(pConf);
 
 	//Запуск CURL и VkApi
 	curl_global_init(CURL_GLOBAL_ALL);
-	
+
 	m_pVk = new VkApi(m_Token,this);
-	
+
 	//Загрузка бесед
 	AddConversation(GetMainConv());
 	LoadConversations();
@@ -70,10 +70,10 @@ void Bot::Start(std::string config_file)
 	db.Open();
 	services.LoadServices();
 	events.Start();
-	
+
 	m_bRunning = true;
 	PrepareLongPoll();
-	
+
 	Run();
 }
 
@@ -84,7 +84,7 @@ void Bot::Stop()
 	events.Stop();
 	services.SaveServices();
 	db.Close();
-	
+
 	delete m_pVk;
 	m_pVk = NULL;
 	curl_global_cleanup();
@@ -94,8 +94,13 @@ void Bot::Run()
 {
 	while(m_bRunning)
 	{
+#ifdef __linux__
+		boost::this_thread::sleep(
+			boost::posix_time::seconds(60));
+#else
 		ProcessMessage(VkMessage(-1,GetMainConv(),-1,
 			time(NULL),ConsoleReadLine()));
+#endif
 	}
 }
 
@@ -103,7 +108,7 @@ void Bot::LoadConversations()
 {
 	int offset = 0;
 	int count = 0;
-	
+
 	try {
 		do {
 			json_value* pVal;
@@ -120,7 +125,7 @@ void Bot::LoadConversations()
 
 				if(items.type != json_array)
 					throw std::runtime_error("items.type != json_array");
-				for(int i = 0; i < items.u.array.length; i++)
+				for(unsigned int i = 0; i < items.u.array.length; i++)
 				{
 					auto& conv = items[i]["conversation"];
 					auto& peer = conv["peer"];
@@ -211,11 +216,11 @@ bool Bot::PrepareLongPoll()
 	try {
 		VkRequest* req = new VkRequest("messages.getLongPollServer");
 		req->SetParam("lp_version","3");
-		
+
 		json_value* pVal;
 		m_pVk->Request(req,&pVal);
 		boost::shared_ptr<json_value> val(pVal,json_value_free);
-	
+
 		const json_value& res = (*val)["response"];
 		PrepareLongPoll(
 			std::string((const char*)res["server"]),
@@ -271,7 +276,7 @@ void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,const Attachme
 		SendMessage(peer_id,text,bAsync,reply,attach);
 		return;
 	}
-	
+
 	std::vector<uint32_t> text32;
 	utf8::utf8to32(text.begin(),text.end(),std::back_inserter(text32));
 	int pos = 0;
@@ -288,7 +293,7 @@ void Bot::Send(int peer_id,std::string text,bool bAsync,int reply,const Attachme
 
 void Bot::Send(convtype_t type,std::string text,bool bAsync,int reply,const Attachment& attach)
 {
-	for(auto it = m_Conversations.begin(); 
+	for(auto it = m_Conversations.begin();
 		it != m_Conversations.end(); ++it)
 	{
 		if(it->type == type || (type == ConvChat && it->type == ConvMainChat))
@@ -299,14 +304,14 @@ void Bot::Send(convtype_t type,std::string text,bool bAsync,int reply,const Atta
 void Bot::ProcessEvent(const json_value& event)
 {
 	services.ProcessEvent(event);
-	
+
 	auto& from = event[6];
 	int peer_id;
 	switch((int)event[0])
 	{
 		case 4:
 			if(&from == &json_value_none) return;
-			int peer_id = (int)event[3];
+			peer_id = (int)event[3];
 			if(!IsValidConversation(peer_id))
 				AddConversation(peer_id);
 			ProcessMessage(VkMessage(
@@ -341,7 +346,7 @@ void Bot::ProcessMessage(const VkMessage& msg)
 			if(m_pVk->GetWorker(i))
 				m_pVk->GetWorker(i)->Dump(dump);
 		}
-		
+
 		Send(msg.m_iConvId,std::string(dump),false);
 	}
 	else if(msg.m_Text == "смотритель#сохранить_сервисы")
@@ -439,7 +444,7 @@ void Bot::OnError(const VkException& e)
 				break;
 		}
 	}
-	
+
 	if(e.IsLongPollError())
 		OnLongPollError(e);
 }
@@ -459,7 +464,7 @@ void Bot::OnLongPollError(const VkException& e)
 		return;
 	}
 	m_iErrLongPoll++;
-	
+
 	if(e.IsConnectionError())
 		StartLongPoll(); //Перезапустить long poll после обрыва подключения.
 	else

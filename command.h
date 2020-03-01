@@ -12,9 +12,9 @@ public:
 
 	std::string GetName() const {return Arg(0);}
 	size_t ArgC() const {return m_Args.size();}
-	std::string Arg(int i) const;
+	std::string Arg(unsigned int i) const;
 	std::string ArgS() const;
-	
+
 	bool HasFlag(std::string flag) const;
 
 	bool Parse(std::string text);

@@ -9,7 +9,7 @@ Command::Command()
 {
 }
 
-std::string Command::Arg(int i) const
+std::string Command::Arg(unsigned int i) const
 {
 	if(i < 0 || i >= m_Args.size()) return "";
 	return m_Args[i];

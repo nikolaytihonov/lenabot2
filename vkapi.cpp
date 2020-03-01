@@ -14,7 +14,7 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp)
 {
     // Note: some broken versions only have 8 trailing zero's, the correct epoch has 9 trailing zero's
     // This magic number is the number of 100 nanosecond intervals since January 1, 1601 (UTC)
-    // until 00:00:00 January 1, 1970 
+    // until 00:00:00 January 1, 1970
     static const uint64_t EPOCH = ((uint64_t) 116444736000000000ULL);
 
     SYSTEMTIME  system_time;
@@ -38,17 +38,17 @@ Time Time::CurTime()
 {
 	Time t;
 	struct timeval tv;
-	
+
 	gettimeofday(&tv,NULL);
 	t.m_Timestamp = tv.tv_sec;
 	t.m_mlSec = tv.tv_usec/1000;
-	
+
 	return t;
 }
 
 void Time::WaitFor(Time t)
 {
-	Time curTime = Time::CurTime();
+	//Time curTime = Time::CurTime();
 	if(t <= Time::CurTime()) return;
 	boost::this_thread::sleep(
 		boost::posix_time::microsec(
@@ -90,7 +90,7 @@ const char* VkConnException::what() const throw()
 {
 	static std::string s_Err;
 	s_Err = boost::str(
-		boost::format("%s - CURL error %d") 
+		boost::format("%s - CURL error %d")
 			% m_pRequest->GetName()
 			% m_Code);
 	return s_Err.c_str();
@@ -144,7 +144,7 @@ void VkApiWorker::Stop()
 #include "dbg.h"
 
 void VkApiWorker::Run()
-{	
+{
 	while(m_bRunning)
 	{
 		while(m_Queue.empty())
@@ -155,7 +155,7 @@ void VkApiWorker::Run()
 			IVkRequest* req = m_Queue.front();
 			m_Queue.pop();
 			m_Mutex.unlock();
-			
+
 			m_Api->DoRequest(req,NULL);
 		} catch(VkConnException& c){
 			BotError("VkConnException - %s\n",c.what());
@@ -177,7 +177,7 @@ void VkApiWorker::Exit()
 
 void VkApiWorker::Dump(std::string& out)
 {
-	for(int i = 0; i < m_Queue.size(); i++)
+	for(unsigned int i = 0; i < m_Queue.size(); i++)
 	{
 		IVkRequest* req = std::move(m_Queue.front());
 		m_Queue.pop();
@@ -192,7 +192,7 @@ VkApi::VkApi(std::string token,IVkApiController* controller,
 	float apiVersion)
 	: m_Token(token),m_pController(controller),
 	m_ApiVersion(apiVersion)
-{	
+{
 	for(int i = 0; i < MAX_WORKER; i++)
 		m_pWorker[i] = NULL;
 }
@@ -218,13 +218,13 @@ void VkApi::Request(IVkRequest* req,json_value** pVal)
 void VkApi::RequestAsync(IVkRequest* req)
 {
 	int idx = (int)req->GetPriority();
-	
+
 	if(!m_pWorker[idx])
 	{
 		m_pWorker[idx] = new VkApiWorker(this);
 		m_pWorker[idx]->Start();
 	}
-	
+
 	req->SetAsync(true);
 	m_pWorker[idx]->AddRequest(req);
 }
@@ -247,52 +247,52 @@ void VkApi::DoRequest(IVkRequest* pReq,json_value** pVal)
 {
 	boost::shared_ptr<IVkRequest> req(pReq);
 	std::string result;
-	
+
 	req->Prepare(this);
 	BotLog("DoRequest req %p %s pVal %p\n",req.get(),req->GetName().c_str(),pVal);
-	
+
 	m_Mutex.lock();
 	stats.CountRequest(req.get());
 
 	Time::WaitFor(m_NextRequest);
 	m_NextRequest = Time::CurTime() + Time(334);
 	m_Mutex.unlock();
-	
+
 	//pCurl = curl_easy_init();
 	boost::shared_ptr<CURL> curl(curl_easy_init(),curl_easy_cleanup);
 	req->PrepareCURL(curl.get());
-	
+
 	curl_easy_setopt(curl.get(),CURLOPT_WRITEFUNCTION,write_string);
 	curl_easy_setopt(curl.get(),CURLOPT_WRITEDATA,&result);
 #ifdef USE_TOR
 	curl_easy_setopt(curl.get(),CURLOPT_PROXY,"socks5h://127.0.0.1:9050");
 #endif
-	
+
 	CURLcode res = curl_easy_perform(curl.get());
-	
+
 	if(res != CURLE_OK)
 	{
 		throw VkConnException(req,res);
 	}
-	
+
 	//создадим лонг полл ошибку
 	/*if(req->IsLongPoll())
 	{
 		puts("FAKE EXCEPTION LONG POLL!\n");
 		result = "{\"failed\":2}";
 	}*/
-	
+
 	puts(result.c_str());
-	
+
 	json_value* pJson = json_parse(result.c_str(),result.size());
 	if(!pJson) throw std::runtime_error("Bad JSON response");
 	json_value& val = *pJson;
-	
+
 	if(val["error"].type != json_none || val["failed"].type != json_none)
 	{
 		throw VkApiException(req,pJson);
 	}
-	
+
 	req->OnRequestFinished(val);
 	if(m_pController)
 		m_pController->OnRequestFinished(req.get());

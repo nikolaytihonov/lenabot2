@@ -10,6 +10,8 @@ Event::Event(std::string name,Time interval)
 	m_iType(IEvent::Timer)
 {
 	m_NextTime = Time::Add(Time::CurTime(),m_Interval);
+	m_iHour = 0;
+    m_iMinute = 0;
 	Register();
 }
 
@@ -21,6 +23,8 @@ Event::Event(Time interval)
 	m_Name = std::string(szBuf);
 	m_Interval = interval;
 	m_NextTime = Time::Add(Time::CurTime(),m_Interval);
+	m_iHour = 0;
+    m_iMinute = 0;
 	Register();
 }
 
@@ -34,7 +38,7 @@ static Time AlignTime(int hour,int minute,int period = PER_DAY)
 	if(cMin >= aMin)
 		dMin = period + aMin - cMin;
 	else dMin = aMin - cMin;
-	
+
 	return Time(dMin*60,0);
 }
 
@@ -44,10 +48,10 @@ Event::Event(std::string name,Time interval,
 	: m_Name(name),m_Interval(interval),
 	m_iHour(alignHour),m_iMinute(alignMinute),
 	m_iType(IEvent::AlignTimer)
-{	
+{
 	m_NextTime = Time::CurTime()
 		+ AlignTime(m_iHour,m_iMinute);
-	
+
 	Register();
 }
 
@@ -57,14 +61,14 @@ Event::Event(std::string name,int hour,int minute,int period)
 	m_iHour(hour),m_iMinute(minute),
 	m_iPeriod(period),
 	m_iType(IEvent::Event)
-{	
+{
 	m_NextTime = Time::CurTime()
 		+ AlignTime(m_iHour,m_iMinute,m_iPeriod);
-	
+
 	printf("m_NextTime %u %d\n",
 		m_NextTime.m_Timestamp,
 		m_NextTime.m_mlSec);
-	
+
 	Register();
 }
 
@@ -72,10 +76,10 @@ Event::Event(std::string name,int hour,int minute,int period)
 m_iHour = alignHour;
 	m_iMinute = alignMinute;
 	m_NextTime = Time::CurTime() + AlignTime(m_iHour,m_iMinute);
-	
+
 	//Align time
 	m_bAlign = !m_bPlanned;
-	
+
 	printf("m_NextTime %u %d\n",
 		m_NextTime.m_Timestamp,
 		m_NextTime.m_mlSec);
@@ -105,11 +109,11 @@ void Event::CalcNextTime()
 			m_NextTime = Time::Add(curTime,m_Interval);
 			break;
 		case IEvent::Event:
-			m_NextTime = curTime 
+			m_NextTime = curTime
 				+ AlignTime(m_iHour,m_iMinute,m_iPeriod);
 			break;
 	}
-	
+
 	printf("m_NextTime (%d) %u %d\n",
 		m_iType,
 		m_NextTime.m_Timestamp,
@@ -151,7 +155,7 @@ void EventSystem::Run()
 		try {
 			boost::this_thread::sleep(
 				boost::posix_time::seconds(1));
-			
+
 			LIST_ITER_BEGIN(Event::s_List)
 				Event* event = (Event*)LIST_DATA(Event::s_List,item);
 				Time curTime = Time::CurTime();
@@ -188,14 +192,14 @@ static int events_load(void*,int,char** argv,char**)
 {
 	Event* evt = events.Find(argv[0]);
 	if(!evt) return 0;
-	
+
 	evt->m_iType = atoi(argv[1]);
 	evt->m_NextTime.FromString(argv[2]);
 	evt->m_Interval.FromString(argv[3]);
 	evt->m_iHour = atoi(argv[4]);
 	evt->m_iMinute = atoi(argv[5]);
 	evt->m_iPeriod = atoi(argv[6]);
-	
+
 	if(evt->m_NextTime < Time::CurTime())
 		evt->CalcNextTime();
 	return 0;
@@ -217,11 +221,11 @@ void EventSystem::Load()
 #include <boost/format.hpp>
 
 void EventSystem::Save()
-{	
+{
 	LIST_ITER_BEGIN(Event::s_List)
 		Event* event = (Event*)LIST_DATA(Event::s_List,item);
 		if(event->GetType() == IEvent::Temp) continue;
-		
+
 		db.Execute(boost::str(
 			boost::format("INSERT OR REPLACE INTO events (name,type,nextTime,interval,hour,minute,period)"
 				" VALUES ('%s',%d,'%s','%s',%d,%d,%d);")

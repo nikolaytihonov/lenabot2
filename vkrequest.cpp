@@ -33,11 +33,11 @@ std::string VkMethods::DownloadPhoto(VkApi* api,int owner,int id,std::string pat
 		boost::shared_ptr<json_value> val(pVal,json_value_free);
 		auto& photo = (*val)["response"][0];
 		auto& sizes = photo["sizes"];
-		
+
 		const char* types = "wzyrqpoxms";
-		for(int i = 0; (i < strlen(types)) && url.empty(); i++)
+		for(unsigned int i = 0; (i < strlen(types)) && url.empty(); i++)
 		{
-			for(int j = 0; j < sizes.u.array.length; j++)
+			for(unsigned int j = 0; j < sizes.u.array.length; j++)
 			{
 				auto& size = sizes[j];
 				char type = ((const char*)size["type"])[0];
@@ -59,7 +59,7 @@ std::string VkMethods::DownloadPhoto(VkApi* api,int owner,int id,std::string pat
 #ifdef USE_TOR
 		curl_easy_setopt(curl.get(),CURLOPT_PROXY,"socks5h://127.0.0.1:9050");
 #endif
-		
+
 		//get file name
 		const char* pUrl = url.c_str();
 		const char* pName = strrchr(pUrl,'/');
@@ -149,7 +149,7 @@ void VkRequest::AddMultipart(const VkPostMultipart& multi)
 
 std::string VkRequest::Serialize(bool bPost) const
 {
-	const std::map<std::string,std::string>& params = bPost 
+	const std::map<std::string,std::string>& params = bPost
 		? m_PostParams : m_Params;
 	if(params.empty()) return "";
 	std::stringstream out;
@@ -167,7 +167,7 @@ void VkRequest::Prepare(VkApi* api)
 	m_pVk = api;
 	if(!IsCustomRequest())
 		SetDefaultURL();
-	
+
 	if(IsStandartRequest())
 	{
 		SetParam("access_token",GetAPI()->GetToken());
@@ -179,15 +179,15 @@ void VkRequest::Prepare(VkApi* api)
 void VkRequest::PrepareCURL(CURL* pCurl)
 {
 	std::string url;
-	
+
 	std::string params = Serialize(false);
 	url = GetURL() + (params.size() ? "?" : "") + params;
 	m_Params.clear();
-	
+
 	curl_easy_setopt(pCurl,CURLOPT_URL,url.c_str());
 	curl_easy_setopt(pCurl,CURLOPT_USERAGENT,"VkApi::DoRequest");
 	BotLog("%s\n",url.c_str());
-	
+
 	std::string postParams = Serialize(true);
 	if(!postParams.empty())
 	{
@@ -195,7 +195,7 @@ void VkRequest::PrepareCURL(CURL* pCurl)
 		curl_easy_setopt(pCurl,CURLOPT_POSTFIELDS,postParams.c_str());
 		m_PostParams.clear();
 	}
-	
+
 	if(!m_Multipart.empty())
 	{
 		struct curl_httppost* last = NULL;
@@ -218,12 +218,12 @@ void VkRequest::PrepareCURL(CURL* pCurl)
 					break;
 			}
 		}
-		
+
 		m_Header = curl_slist_append(m_Header, "Content-Type: multipart/form-data");
-		
+
 		curl_easy_setopt(pCurl,CURLOPT_HTTPPOST,m_Form);
 		curl_easy_setopt(pCurl,CURLOPT_HTTPHEADER,m_Header);
-		
+
 		m_Multipart.clear();
 	}
 }
@@ -255,7 +255,7 @@ VkLinkedRequest::VkLinkedRequest()
 	: VkRequest(""),m_iStage(0)
 {
 }
-	
+
 void VkLinkedRequest::OnRequestFinished(json_value& val)
 {
 	if(GetFinalStage() <= 0 || m_iStage != GetFinalStage())
@@ -278,7 +278,7 @@ VkLongPoll::VkLongPoll(std::string server,std::string key,int ts,
 void VkLongPoll::Prepare(VkApi* vk)
 {
 	VkRequest::Prepare(vk);
-	
+
 	SetParam("act","a_check");
 	SetParam("key",m_Key);
 	SetParam("ts",m_iTS);
@@ -292,7 +292,7 @@ void VkLongPoll::OnRequestFinished(json_value& val)
 	m_pController->OnLongPoll(val);
 	m_iTS = val["ts"];
 	BotLog("Requesting new long poll..\n");
-	
+
 	VkLinkedRequest::OnRequestFinished(val);
 }
 
@@ -343,7 +343,7 @@ void VkUploadPhotoChat::OnRequestFinished(json_value& val)
 			m_Method = "";
 			SetPriority(IVkRequest::Other);
 			break;
-		case 1:			
+		case 1:
 			Clear();
 			m_bCustom = false;
 			SetParam("server",(int)val["server"]);
@@ -354,7 +354,7 @@ void VkUploadPhotoChat::OnRequestFinished(json_value& val)
 			break;
 		case 2:
 			Clear();
-			attach = boost::str(boost::format("photo%d_%d") 
+			attach = boost::str(boost::format("photo%d_%d")
 				%	(int)(r[0])["owner_id"]
 				%	(int)(r[0])["id"]);
 			m_Attachments.push_back(attach);
@@ -422,7 +422,7 @@ void VkCommandGetMessage::OnRequestFinished(json_value& val)
 	}
 	else
 	{
-		const json_value& reply = (jmsg["fwd_messages"])[0];	
+		const json_value& reply = (jmsg["fwd_messages"])[0];
 		msg.m_FwdText = std::string((const char*)reply["text"]);
 		msg.m_iFwdUser = (int)reply["from_id"];
 	}
